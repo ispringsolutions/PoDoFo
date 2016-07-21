@@ -271,43 +271,20 @@ void PdfDictionary::Write( PdfOutputDevice* pDevice, EPdfWriteMode eWriteMode, c
     if( keyStop != PdfName::KeyNull && keyStop.GetLength() && keyStop == PdfName::KeyType )
         return;
 
-    if( this->HasKey( PdfName::KeyType ) ) 
-    {
-        // Type has to be the first key in any dictionary
-        if( (eWriteMode & ePdfWriteMode_Clean) == ePdfWriteMode_Clean ) 
-        {
-            pDevice->Print( "/Type " );
-        }
-        else
-        {
-            pDevice->Print( "/Type" );
-        }
-
-        this->GetKey( PdfName::KeyType )->Write( pDevice, eWriteMode, pEncrypt );
-
-        if( (eWriteMode & ePdfWriteMode_Clean) == ePdfWriteMode_Clean ) 
-        {
-            pDevice->Print( "\n" );
-        }
-    }
-
     while( itKeys != m_mapKeys.end() )
     {
-        if( (*itKeys).first != PdfName::KeyType )
-        {
-            if( keyStop != PdfName::KeyNull && keyStop.GetLength() && (*itKeys).first == keyStop )
-                return;
+        if ( keyStop != PdfName::KeyNull && keyStop.GetLength() && (*itKeys).first == keyStop )
+            return;
 
-            (*itKeys).first.Write( pDevice, eWriteMode );
-            if( (eWriteMode & ePdfWriteMode_Clean) == ePdfWriteMode_Clean ) 
-            {
-                pDevice->Write( " ", 1 ); // write a separator
-            }
-            (*itKeys).second->Write( pDevice, eWriteMode, pEncrypt );
-            if( (eWriteMode & ePdfWriteMode_Clean) == ePdfWriteMode_Clean ) 
-            {
-                pDevice->Write( "\n", 1 );
-            }
+        (*itKeys).first.Write( pDevice, eWriteMode );
+        if ( (eWriteMode & ePdfWriteMode_Clean) == ePdfWriteMode_Clean )
+        {
+            pDevice->Write( " ", 1 ); // write a separator
+        }
+        (*itKeys).second->Write( pDevice, eWriteMode, pEncrypt );
+        if ( (eWriteMode & ePdfWriteMode_Clean) == ePdfWriteMode_Clean )
+        {
+            pDevice->Write( "\n", 1 );
         }
         
         ++itKeys;
