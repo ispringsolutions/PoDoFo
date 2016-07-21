@@ -178,14 +178,7 @@ void PdfObject::WriteObject( PdfOutputDevice* pDevice, EPdfWriteMode eWriteMode,
 
     if( m_reference.IsIndirect() )
     {
-        if( (eWriteMode & ePdfWriteMode_Clean) == ePdfWriteMode_Clean ) 
-        {
-            pDevice->Print( "%i %i obj\n", m_reference.ObjectNumber(), m_reference.GenerationNumber() );
-        }
-        else 
-        {
-            pDevice->Print( "%i %i obj", m_reference.ObjectNumber(), m_reference.GenerationNumber() );
-        }
+        pDevice->Print( "%i %i obj\n", m_reference.ObjectNumber(), m_reference.GenerationNumber( ));
     }
 
     if( pEncrypt ) 
@@ -207,7 +200,6 @@ void PdfObject::WriteObject( PdfOutputDevice* pDevice, EPdfWriteMode eWriteMode,
     }
 
     this->Write( pDevice, eWriteMode, pEncrypt, keyStop );
-    pDevice->Print( "\n" );
 
     if( m_pStream )
     {
@@ -216,7 +208,7 @@ void PdfObject::WriteObject( PdfOutputDevice* pDevice, EPdfWriteMode eWriteMode,
 
     if( m_reference.IsIndirect() )
     {
-        pDevice->Print( "endobj\n" );
+        pDevice->Print( "\nendobj\n" );
     }
 }
 
