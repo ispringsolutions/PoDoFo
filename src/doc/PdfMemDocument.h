@@ -147,7 +147,7 @@ class PODOFO_DOC_API PdfMemDocument : public PdfDocument {
      *  Call SetPassword with the correct password in this case.
      *  
      *  This is an overloaded member function to allow working
-     *  with unicode characters. On Unix systes you can also path
+     *  with unicode characters. On Unix systems you can also path
      *  UTF-8 to the const char* overload.
      *
      *  \see SetPassword

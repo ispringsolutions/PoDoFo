@@ -433,7 +433,7 @@ class PODOFO_API PdfParser : public PdfTokenizer {
     void ReadDocumentStructure();
 
     /** Checks wether this pdf is linearized or not.
-     *  Initializes the linearization directory on sucess.
+     *  Initializes the linearization directory on success.
      */
     void HasLinearizationDict();
 
