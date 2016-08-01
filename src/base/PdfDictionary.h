@@ -97,12 +97,19 @@ class PODOFO_API PdfDictionary : public PdfDataType {
      */
     PdfDictionary( const PdfDictionary & rhs );
 
+#if PODOFO_USE_RVALUEREF
+    /** Move a dictionary
+     *  \param rhs the PdfDictionary to move
+     */
+    PdfDictionary( PdfDictionary && rhs );
+#endif
+
     /** Destructor
      */
     virtual ~PdfDictionary();
 
-    /** Asignment operator.
-     *  Asign another PdfDictionary to this dictionary. This is a deep copy;
+    /** Assignment operator.
+     *  Assign another PdfDictionary to this dictionary. This is a deep copy;
      *  all elements of the source dictionary are duplicated.
      *
      *  \param rhs the PdfDictionary to copy.
@@ -113,6 +120,21 @@ class PODOFO_API PdfDictionary : public PdfDataType {
      *  \see IsDirty
      */
     const PdfDictionary & operator=( const PdfDictionary & rhs );
+
+#if PODOFO_USE_RVALUEREF
+    /** Assignment operator.
+     *  Assign another PdfDictionary to this dictionary. This is a move;
+     *  all elements from the source dictionary are moved.
+     *
+     *  \param rhs the PdfDictionary to copy.
+     *
+     *  \return this PdfDictionary
+     *
+     *  This will set the dirty flag of this object.
+     *  \see IsDirty
+     */
+    PdfDictionary & operator=(PdfDictionary && rhs);
+#endif
 
     /**
      * Comparison operator. If this dictionary contains all the same keys
@@ -141,6 +163,20 @@ class PODOFO_API PdfDictionary : public PdfDataType {
      *  \see IsDirty
      */
     void AddKey( const PdfName & identifier, const PdfObject & rObject );
+
+#if PODOFO_USE_RVALUEREF
+    /** Add a key to the dictionary. If an existing key of this name exists, its
+     *  value is replaced and the old value object will be deleted. The passed
+     *  object is moved.
+     *
+     *  \param identifier the key is identified by this name in the dictionary
+     *  \param rObject a variant object containing the data. The object is copied.
+     *
+     *  This will set the dirty flag of this object.
+     *  \see IsDirty
+     */
+    void AddKey( const PdfName & identifier, PdfObject&& rObject );
+#endif
 
     /** Add a key to the dictionary. If an existing key of this name exists,
      *  its value is replaced and the old value object will be deleted. The

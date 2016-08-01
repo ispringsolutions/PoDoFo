@@ -133,6 +133,20 @@ class PODOFO_API PdfArray : private PdfArrayBaseClass, public PdfDataType {
      */
     inline void push_back( const PdfObject & var );
 
+    /** Constructs a PdfObject on the array back
+     *  Equal to push_back if PoDoFo was built without C++11 support
+     *
+     *  \param var add a PdfObject to the array
+     *
+     *  This will set the dirty flag of this object.
+     *  \see IsDirty
+     */
+    inline void emplace_back( const PdfObject & var );
+
+#if PODOFO_USE_RVALUEREF
+    inline void emplace_back( PdfObject && var );
+#endif
+
     /** 
      *  \returns the size of the array
      */
@@ -308,6 +322,41 @@ void PdfArray::push_back( const PdfObject & var )
     PdfArrayBaseClass::push_back( var );
     m_bDirty = true;
 }
+
+#if PODOFO_USE_RVALUEREF
+// -----------------------------------------------------
+// 
+// -----------------------------------------------------
+void PdfArray::emplace_back( const PdfObject & var )
+{
+    AssertMutable();
+
+    PdfArrayBaseClass::emplace_back( var );
+    m_bDirty = true;
+}
+
+void PdfArray::emplace_back( PdfObject && var )
+{
+    AssertMutable();
+
+    PdfArrayBaseClass::emplace_back( var );
+    m_bDirty = true;
+}
+
+#else
+
+// -----------------------------------------------------
+// C++98 fallback
+// -----------------------------------------------------
+void PdfArray::emplace_back(const PdfObject & var)
+{
+	AssertMutable();
+
+	PdfArrayBaseClass::push_back( var );
+	m_bDirty = true;
+}
+
+#endif
 
 // -----------------------------------------------------
 // 

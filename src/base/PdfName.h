@@ -74,6 +74,17 @@ class PODOFO_API PdfName : public PdfDataType {
     {
     }
 
+#if PODOFO_USE_RVALUEREF
+    /** Create a new PdfName object.
+     *  \param sName the unescaped value of this name. Please specify
+     *                 the name without the leading '/'.
+     */
+    PdfName( std::string&& sName )
+        : PdfDataType(), m_Data(std::move(sName))
+    {
+    }
+#endif
+
     /** Create a new PdfName object.
      *  \param pszName the unescaped value of this name. Please specify
      *                 the name without the leading '/'.
@@ -129,6 +140,13 @@ class PODOFO_API PdfName : public PdfDataType {
         : PdfDataType(), m_Data(rhs.m_Data)
     {
     }
+	
+#if PODOFO_USE_RVALUEREF
+    PdfName( PdfName && rhs )
+        : PdfDataType(), m_Data(std::move(rhs.m_Data))
+    {
+    }
+#endif
 
     virtual ~PdfName();
 

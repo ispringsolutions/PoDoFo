@@ -615,10 +615,10 @@ void PdfTokenizer::ReadDictionary( PdfVariant& rVariant, PdfEncrypt* pEncrypt )
         // Get the next variant. If there isn't one, it'll throw UnexpectedEOF.
         this->GetNextVariant( val, pEncrypt );
 
-        dict.AddKey( key, val );
+        dict.AddKey( key, PODOFO_MOVE(val) );
     }
 
-    rVariant = dict;
+    rVariant = PODOFO_MOVE(dict);
 }
 
 void PdfTokenizer::ReadArray( PdfVariant& rVariant, PdfEncrypt* pEncrypt )
@@ -639,10 +639,10 @@ void PdfTokenizer::ReadArray( PdfVariant& rVariant, PdfEncrypt* pEncrypt )
             break;
 
         this->GetNextVariant( pszToken, eType, var, pEncrypt );
-        array.push_back( var );
+        array.emplace_back( PODOFO_MOVE(var) );
     }
 
-    rVariant = array;
+    rVariant = PODOFO_MOVE(array);
 }
 
 void PdfTokenizer::ReadString( PdfVariant& rVariant, PdfEncrypt* pEncrypt )
@@ -752,7 +752,7 @@ void PdfTokenizer::ReadString( PdfVariant& rVariant, PdfEncrypt* pEncrypt )
     }
     else
     {
-        rVariant = PdfString("");
+        rVariant = PdfString();
     }
 }
 

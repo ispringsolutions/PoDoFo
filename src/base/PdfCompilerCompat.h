@@ -23,6 +23,20 @@
 #endif // _MSC_VER
 #endif // _MSC_VER
 
+#if defined(_MSC_VER) && (_MSC_VER >= 1800) // Visual Studio 2013
+#define PODOFO_USE_RVALUEREF 1
+#elif defined(__GNUC__) && (__GNUC__ >= 5) // GCC 5.0 or higher
+#define PODOFO_USE_RVALUEREF 1
+#elif defined(__has_feature) && __has_feature(cxx_rvalue_references) // Any Clang version
+#define PODOFO_USE_RVALUEREF 1
+#endif
+
+#if PODOFO_USE_RVALUEREF
+#define PODOFO_MOVE(x) std::move(x)
+#else
+#define PODOFO_MOVE(x) x
+#endif
+
 // Make sure that DEBUG is defined 
 // for debug builds on Windows
 // as Visual Studio defines only _DEBUG

@@ -108,6 +108,10 @@ class PODOFO_API PdfVariant {
      */        
     PdfVariant( const PdfName & rName );
 
+#if PODOFO_USE_RVALUEREF
+    PdfVariant( PdfName && rName );
+#endif
+
     /** Construct a PdfVariant that is a name.
      *  \param rRef the value of the name
      */        
@@ -120,12 +124,20 @@ class PODOFO_API PdfVariant {
      *
      *  \param tList a list of variants
      */
-    PdfVariant( const PdfArray & tList );
+	PdfVariant( const PdfArray & tList );
+
+#if PODOFO_USE_RVALUEREF
+    PdfVariant( PdfArray && tList );
+#endif
 
     /** Construct a PdfVariant that is a dictionary.
      *  \param rDict the value of the dictionary.
      */        
     PdfVariant( const PdfDictionary & rDict );
+
+#if PODOFO_USE_RVALUEREF
+    PdfVariant( PdfDictionary && rDict );
+#endif
 
     /** Construct a PdfVariant that contains raw PDF data.
      *  \param rData raw and valid PDF data.
@@ -137,6 +149,13 @@ class PODOFO_API PdfVariant {
      *  \param rhs an existing variant which is copied.
      */
     PdfVariant( const PdfVariant & rhs );
+
+#if PODOFO_USE_RVALUEREF
+    /** Moves PdfVariant and makes rhs clean.
+     *  \param rhs an existing variant which will be cleaned.
+     */
+    PdfVariant( PdfVariant && rhs );
+#endif
 
     virtual ~PdfVariant();
     
@@ -326,6 +345,12 @@ class PODOFO_API PdfVariant {
      *  \see IsDirty
      */
     const PdfVariant & operator=( const PdfVariant & rhs );
+
+#if PODOFO_USE_RVALUEREF
+    /** Move the values from another PdfVariant to this one
+     */
+    PdfVariant & operator=( PdfVariant && rhs );
+#endif
 
     /**
      * Test to see if the value contained by this variant is the same

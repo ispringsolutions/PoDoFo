@@ -50,6 +50,13 @@ PdfDictionary::PdfDictionary( const PdfDictionary & rhs )
     m_bDirty = false;
 }
 
+#if PODOFO_USE_RVALUEREF
+PdfDictionary::PdfDictionary( PdfDictionary && rhs )
+    : PdfDataType(), m_mapKeys(std::move(rhs.m_mapKeys)), m_bDirty(rhs.m_bDirty)
+{
+}
+#endif
+
 PdfDictionary::~PdfDictionary()
 {
     this->SetImmutable(false); // Destructor may change things, i.e. delete
@@ -72,6 +79,17 @@ const PdfDictionary & PdfDictionary::operator=( const PdfDictionary & rhs )
     m_bDirty = true;
     return *this;
 }
+
+#if PODOFO_USE_RVALUEREF
+PdfDictionary & PdfDictionary::operator=( PdfDictionary && rhs )
+{
+    this->Clear();
+    m_mapKeys = std::move( rhs.m_mapKeys );
+    m_bDirty = rhs.m_bDirty;
+
+    return *this;
+}
+#endif
 
 bool PdfDictionary::operator==( const PdfDictionary& rhs ) const
 {
@@ -148,6 +166,28 @@ void PdfDictionary::AddKey( const PdfName & identifier, const PdfObject & rObjec
 	m_mapKeys[identifier] = new PdfObject( rObject );
     m_bDirty = true;
 }
+
+#if PODOFO_USE_RVALUEREF
+void PdfDictionary::AddKey( const PdfName & identifier, PdfObject&& rObject )
+{
+    AssertMutable();
+
+	TIKeyMap it = m_mapKeys.find( identifier );
+	PdfObject *pObject = new PdfObject( std::move(rObject) );
+
+    if(it != m_mapKeys.end() )
+    {
+		delete it->second;
+		it->second = pObject;
+    }
+	else
+	{
+		m_mapKeys[identifier] = pObject;
+	}
+
+    m_bDirty = true;
+}
+#endif
 
 void PdfDictionary::AddKey( const PdfName & identifier, const PdfObject* pObject )
 {

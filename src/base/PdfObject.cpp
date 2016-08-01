@@ -79,6 +79,20 @@ PdfObject::PdfObject( const PdfVariant & var )
     InitPdfObject();
 }
 
+#if PODOFO_USE_RVALUEREF
+PdfObject::PdfObject( PdfReference && rRef, PdfVariant && rVariant )
+    : PdfVariant( std::move(rVariant) ), m_reference( std::move(rRef) )
+{
+    InitPdfObject();
+}
+
+PdfObject::PdfObject( PdfVariant && var )
+    : PdfVariant( std::move(var) )
+{
+    InitPdfObject();
+}
+#endif
+
 PdfObject::PdfObject( bool b )
     : PdfVariant( b )
 {
@@ -147,6 +161,24 @@ PdfObject::PdfObject( const PdfObject & rhs )
     assert(DelayedStreamLoadDone());
 #endif
 }
+
+#if PODOFO_USE_RVALUEREF
+PdfObject::PdfObject( PdfObject && rhs )
+	: PdfVariant( std::move(rhs) ),  m_reference( rhs.m_reference )
+{
+	if ( rhs.m_pStream && rhs.m_pOwner )
+		m_pStream = rhs.m_pOwner->CreateStream( *(rhs.m_pStream) );
+	delete rhs.m_pStream;
+	std::swap( m_pOwner, rhs.m_pOwner );
+
+	std::swap( m_bDelayedStreamLoadDone, rhs.m_bDelayedStreamLoadDone );
+#if defined(PODOFO_EXTRA_CHECKS)
+	std::swap( m_bDelayedStreamLoadInProgress, rhs.m_bDelayedStreamLoadInProgress );
+#endif
+
+	InitPdfObject();
+}
+#endif
 
 PdfObject::~PdfObject()
 {

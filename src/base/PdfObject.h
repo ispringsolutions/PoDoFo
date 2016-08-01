@@ -92,6 +92,21 @@ class PODOFO_API PdfObject : public PdfVariant {
      */
     PdfObject( const PdfVariant & var );
 
+#if PODOFO_USE_RVALUEREF
+    /** Construct a new PDF object.
+     *  \param rRef reference of this object
+     *  \param rVariant the value of the PdfObject (which is copied)
+     */
+    PdfObject( PdfReference && rRef, PdfVariant && rVariant );
+
+    /** Create a PDF object with object and generation number -1
+     *  and the value of the passed variant.
+     *
+     *  \param var the value of the object
+     */
+    PdfObject( PdfVariant && var );
+#endif
+
     /** Construct a PdfObject with object and generation number -1
      *  and a bool as value.
      *
@@ -149,10 +164,18 @@ class PODOFO_API PdfObject : public PdfVariant {
     PdfObject( const PdfDictionary & rDict );
 
     /** Creates a copy of an existing PdfObject
-     *  All assosiated objects and streams will be copied along with the PdfObject
+     *  All associated objects and streams will be copied along with the PdfObject
      *  \param rhs PdfObject to clone
      */
     PdfObject( const PdfObject & rhs );
+
+#if PODOFO_USE_RVALUEREF
+    /** Creates a copy of an existing PdfObject
+     *  All associated objects and streams will be copied along with the PdfObject
+     *  \param rhs PdfObject to clone
+     */
+    PdfObject( PdfObject && rhs );
+#endif
 
     virtual ~PdfObject();
 
@@ -229,7 +252,7 @@ class PODOFO_API PdfObject : public PdfVariant {
      */
     PODOFO_NOTHROW inline bool operator<( const PdfObject & rhs ) const;
 
-    /** Comperasion operator.
+    /** Comparison operator.
      *  Compares two PDF object only based on their object and generation number
      */
     PODOFO_NOTHROW inline bool operator==( const PdfObject & rhs ) const;
@@ -247,7 +270,7 @@ class PODOFO_API PdfObject : public PdfVariant {
     inline PdfVecObjects* GetOwner() const;
 
     /** Creates a copy of an existing PdfObject
-     *  All assosiated objects and streams will be copied along with the PdfObject
+     *  All associated objects and streams will be copied along with the PdfObject
      *  \param rhs PdfObject to clone
      *  \returns a reference to this object
      */

@@ -56,8 +56,8 @@ inline void PdfVariant::Init()
 {
     // DS: These members will be set in ::Clear()
     //     which is called by every constructor.
-    // m_bDelayedLoadDone = true;
-    // m_bDirty = false;
+    m_bDelayedLoadDone = true;
+    m_bDirty = false;
 
     // Has to be done in Init so that Clear() works
     // and can delete data if necessary
@@ -74,16 +74,11 @@ inline void PdfVariant::Init()
 PdfVariant::PdfVariant()
 {
     Init();
-    Clear();
-
-    m_eDataType = ePdfDataType_Null;
 }
 
 PdfVariant::PdfVariant( bool b )
 {
     Init();
-    Clear();
-
     m_eDataType       = ePdfDataType_Bool;
     m_Data.bBoolValue = b;
 }
@@ -91,8 +86,6 @@ PdfVariant::PdfVariant( bool b )
 PdfVariant::PdfVariant( pdf_int64 l )
 {
     Init();
-    Clear();
-
     m_eDataType       = ePdfDataType_Number;
     m_Data.nNumber    = l;
 }
@@ -100,8 +93,6 @@ PdfVariant::PdfVariant( pdf_int64 l )
 PdfVariant::PdfVariant( double d )
 {
     Init();
-    Clear();
-
     m_eDataType       = ePdfDataType_Real;
     m_Data.dNumber    = d;    
 }
@@ -109,8 +100,6 @@ PdfVariant::PdfVariant( double d )
 PdfVariant::PdfVariant( const PdfString & rsString )
 {
     Init();
-    Clear();
-
     m_eDataType  = rsString.IsHex() ? ePdfDataType_HexString : ePdfDataType_String;
     m_Data.pData = new PdfString( rsString );
 }
@@ -118,17 +107,22 @@ PdfVariant::PdfVariant( const PdfString & rsString )
 PdfVariant::PdfVariant( const PdfName & rName )
 {
     Init();
-    Clear();
-
     m_eDataType  = ePdfDataType_Name;
     m_Data.pData = new PdfName( rName );
 }
 
+#if PODOFO_USE_RVALUEREF
+PdfVariant::PdfVariant( PdfName && rName )
+{
+    Init();
+    m_eDataType  = ePdfDataType_Name;
+    m_Data.pData = new PdfName( std::move(rName) );
+}
+#endif
+
 PdfVariant::PdfVariant( const PdfReference & rRef )
 {
     Init();
-    Clear();
-
     m_eDataType  = ePdfDataType_Reference;
     m_Data.pData = new PdfReference( rRef );
 }
@@ -136,26 +130,38 @@ PdfVariant::PdfVariant( const PdfReference & rRef )
 PdfVariant::PdfVariant( const PdfArray & rArray )
 {
     Init();
-    Clear();
-
     m_eDataType  = ePdfDataType_Array;
     m_Data.pData = new PdfArray( rArray );
 }
 
+#if PODOFO_USE_RVALUEREF
+PdfVariant::PdfVariant( PdfArray && rArray )
+{
+    Init();
+    m_eDataType = ePdfDataType_Array;
+    m_Data.pData = new PdfArray(std::move(rArray));
+}
+#endif
+
 PdfVariant::PdfVariant( const PdfDictionary & rObj )
 {
     Init();
-    Clear();
-
     m_eDataType  = ePdfDataType_Dictionary;
     m_Data.pData = new PdfDictionary( rObj );
 }
 
+#if PODOFO_USE_RVALUEREF
+PdfVariant::PdfVariant( PdfDictionary && rObj )
+{
+    Init();
+    m_eDataType  = ePdfDataType_Dictionary;
+    m_Data.pData = new PdfDictionary( std::move(rObj) );
+}
+#endif
+
 PdfVariant::PdfVariant( const PdfData & rData )
 {
     Init();
-    Clear();
-
     m_eDataType  = ePdfDataType_RawData;
     m_Data.pData = new PdfData( rData );
 }
@@ -167,6 +173,19 @@ PdfVariant::PdfVariant( const PdfVariant & rhs )
 
     SetDirty( false );
 }
+
+#if PODOFO_USE_RVALUEREF
+PdfVariant::PdfVariant( PdfVariant && rhs )
+{
+    Init();
+    m_eDataType = ePdfDataType_Null;
+
+    std::swap(m_Data, rhs.m_Data);
+    std::swap(m_bDirty, rhs.m_bDirty);
+    std::swap(m_bImmutable, rhs.m_bImmutable);
+    std::swap(m_eDataType, rhs.m_eDataType);
+}
+#endif
 
 PdfVariant::~PdfVariant()
 {
@@ -403,6 +422,25 @@ const PdfVariant & PdfVariant::operator=( const PdfVariant & rhs )
 
     return (*this);
 }
+
+#if PODOFO_USE_RVALUEREF
+PdfVariant & PdfVariant::operator=( PdfVariant && rhs )
+{
+	if ( this != &rhs )
+	{
+		m_bImmutable = false;
+		Clear();
+		m_eDataType = ePdfDataType_Null;
+
+		std::swap(m_Data, rhs.m_Data);
+		std::swap(m_bDirty, rhs.m_bDirty);
+		std::swap(m_bImmutable, rhs.m_bImmutable);
+		std::swap(m_eDataType, rhs.m_eDataType);
+	}
+
+	return (*this);
+}
+#endif
 
 const char * PdfVariant::GetDataTypeString() const
 {
