@@ -212,7 +212,7 @@ bool PdfTokenizer::GetNextToken( const char*& pszToken , EPdfTokenType* peType )
     // check first if there are queued tokens and return them first
     if( m_deqQueque.size() )
     {
-        TTokenizerPair pair = m_deqQueque.front();
+        TTokenizerPair pair = PODOFO_MOVE(m_deqQueque.front());
         m_deqQueque.pop_front();
 
         if( peType )
@@ -820,7 +820,11 @@ void PdfTokenizer::ReadName( PdfVariant& rVariant )
 
 void PdfTokenizer::QuequeToken( const char* pszToken, EPdfTokenType eType )
 {
+#if PODOFO_USE_RVALUEREF
+    m_deqQueque.emplace_back( std::string( pszToken ), eType );
+#else
     m_deqQueque.push_back( TTokenizerPair( std::string( pszToken ), eType ) );
+#endif
 }
 
 };
