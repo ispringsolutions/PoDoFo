@@ -484,8 +484,6 @@ void PdfParser::HasLinearizationDict()
 
 void PdfParser::MergeTrailer( const PdfObject* pTrailer )
 {
-    PdfVariant  cVar;
-
     if( !pTrailer || !m_pTrailer )
     {
         PODOFO_RAISE_ERROR( ePdfError_InvalidHandle );
