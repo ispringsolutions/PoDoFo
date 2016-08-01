@@ -39,6 +39,7 @@
 #include "PdfOutputStream.h"
 #include "PdfTokenizer.h"
 #include "PdfDefinesPrivate.h"
+#include <limits>
 
 #ifdef PODOFO_HAVE_JPEG_LIB
 extern "C" {
@@ -109,28 +110,21 @@ public:
         m_nBpp  = (m_nBPC * m_nColors) >> 3;
         m_nRows = (m_nColumns * m_nColors * m_nBPC) >> 3;
 
-        m_pPrev = static_cast<char*>(podofo_calloc( m_nRows, sizeof(char) ));
-        if( !m_pPrev )
-        {
-            PODOFO_RAISE_ERROR( ePdfError_OutOfMemory );
-        }
-
-        memset( m_pPrev, 0, sizeof(char) * m_nRows );
+        m_prevLine.resize( m_nRows, 0 );
+        m_curLine.resize( m_nRows, 0 );
     };
 
     ~PdfPredictorDecoder()
     {
-        podofo_free( m_pPrev );
     }
 
-    void Decode( const char* pBuffer, pdf_long lLen, PdfOutputStream* pStream ) 
+    void Decode( const unsigned char* pBuffer, pdf_long lLen, PdfOutputStream* pStream )
     {
         if( m_nPredictor == 1 )
         {
-            pStream->Write( pBuffer, lLen );
+            pStream->Write( reinterpret_cast<const char *>(pBuffer), lLen );
             return;
         }
-
 
         while( lLen-- ) 
         {
@@ -147,9 +141,9 @@ public:
                     {
                         if(m_nBPC == 8)
                         {   // Same as png sub
-                            int prev = (m_nCurRowIndex - m_nBpp < 0
-                                        ? 0 : m_pPrev[m_nCurRowIndex - m_nBpp]);
-                            m_pPrev[m_nCurRowIndex] = *pBuffer + prev;
+                            int left = (m_nCurRowIndex - m_nBpp < 0
+                                        ? 0 : m_curLine[m_nCurRowIndex - m_nBpp]);
+                            m_curLine[m_nCurRowIndex] = *pBuffer + left;
                             break;
                         }
 
@@ -159,32 +153,41 @@ public:
                     }
                     case 10: // png none
                     {
-                        m_pPrev[m_nCurRowIndex] = *pBuffer;
+                        m_curLine[m_nCurRowIndex] = *pBuffer;
                         break;
                     }
                     case 11: // png sub
                     {
-                        int prev = (m_nCurRowIndex - m_nBpp < 0 
-                                    ? 0 : m_pPrev[m_nCurRowIndex - m_nBpp]);
-                        m_pPrev[m_nCurRowIndex] = *pBuffer + prev;
+                        const int left = (m_nCurRowIndex - m_nBpp < 0
+                                    ? 0 : m_curLine[m_nCurRowIndex - m_nBpp]);
+                        m_curLine[m_nCurRowIndex] = *pBuffer + left;
                         break;
                     }
                     case 12: // png up
                     {
-                        m_pPrev[m_nCurRowIndex] += *pBuffer;
+                        const int up = m_prevLine[m_nCurRowIndex];
+                        m_curLine[m_nCurRowIndex] = *pBuffer + up;
                         break;
                     }
                     case 13: // png average
                     {
-                        int prev = (m_nCurRowIndex - m_nBpp < 0 
-                                    ? 0 : m_pPrev[m_nCurRowIndex - m_nBpp]);
-                        m_pPrev[m_nCurRowIndex] = ((prev + m_pPrev[m_nCurRowIndex]) >> 1) + *pBuffer;
+                        const int left = (m_nCurRowIndex - m_nBpp < 0
+                                    ? 0 : m_curLine[m_nCurRowIndex - m_nBpp]);
+                        const int up = m_prevLine[m_nCurRowIndex];
+                        m_curLine[m_nCurRowIndex] = *pBuffer + ((left + up) >> 1);
                         break;
                     }
-					case 14: // png paeth
-						PODOFO_RAISE_ERROR_INFO( ePdfError_InvalidPredictor, "png paeth predictor is not implemented" );
-						break;
-
+                    case 14: // png paeth
+                    {
+                        const int left = (m_nCurRowIndex - m_nBpp < 0
+                            ? 0 : m_curLine[m_nCurRowIndex - m_nBpp]);
+                        const int up = m_prevLine[m_nCurRowIndex];
+                        const int upLeft = (m_nCurRowIndex - m_nBpp < 0
+                            ? 0 : m_prevLine[m_nCurRowIndex - m_nBpp]);
+                        const int mod = std::numeric_limits<unsigned char>::max() + 1;
+                        m_curLine[m_nCurRowIndex] = (*pBuffer + GetPaethPredictor(left, up, upLeft)) % mod;
+                        break;
+                    }
                     case 15: // png optimum
                         PODOFO_RAISE_ERROR_INFO( ePdfError_InvalidPredictor, "png optimum predictor is not implemented" );
                         break;
@@ -203,15 +206,33 @@ public:
 
             if( m_nCurRowIndex >= m_nRows ) 
             {   // One line finished
-                m_nCurRowIndex  = 0;
+                m_nCurRowIndex = 0;
                 m_bNextByteIsPredictor = (m_nCurPredictor >= 10);
-                pStream->Write( m_pPrev, m_nRows );
+                pStream->Write( reinterpret_cast<const char *>(&m_curLine[0]), m_nRows );
+                m_curLine.swap(m_prevLine);
             }
         }
     }
 
 
 private:
+    static int GetPaethPredictor(int a, int b, int c)
+    {
+        int p = a + b - c;
+        int pa = std::abs(p - a);
+        int pb = std::abs(p - b);
+        int pc = std::abs(p - c);
+        if (pa <= pb && pa <= pc)
+        {
+            return a;
+        }
+        if (pb <= pc)
+        {
+            return b;
+        }
+        return c;
+    }
+
     int m_nPredictor;
     int m_nColors;
     int m_nBPC; //< Bytes per component
@@ -225,7 +246,8 @@ private:
 
     bool m_bNextByteIsPredictor;
 
-    char* m_pPrev;
+    std::vector<unsigned char> m_prevLine;
+    std::vector<unsigned char> m_curLine;
 };
 
 
@@ -585,7 +607,7 @@ void PdfFlateFilter::DecodeBlockImpl( const char* pBuffer, pdf_long lLen )
         nWrittenData = PODOFO_FILTER_INTERNAL_BUFFER_SIZE - m_stream.avail_out;
         try {
             if( m_pPredictor ) 
-                m_pPredictor->Decode( reinterpret_cast<char*>(m_buffer), nWrittenData, GetStream() );
+                m_pPredictor->Decode( m_buffer, nWrittenData, GetStream() );
             else
                 GetStream()->Write( reinterpret_cast<char*>(m_buffer), nWrittenData );
         } catch( PdfError & e ) {
@@ -775,7 +797,7 @@ void PdfLZWFilter::DecodeBlockImpl( const char* pBuffer, pdf_long lLen )
 
                 // Write data to the output device
                 if( m_pPredictor ) 
-                    m_pPredictor->Decode( reinterpret_cast<char*>(&(data[0])), data.size(), GetStream() );
+                    m_pPredictor->Decode( &(data[0]), data.size(), GetStream() );
                 else
                     GetStream()->Write( reinterpret_cast<char*>(&(data[0])), data.size());
 
