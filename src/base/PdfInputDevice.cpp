@@ -82,7 +82,7 @@ PdfInputDevice::PdfInputDevice( const wchar_t* pszFilename )
 
     try {
         // James McGill 16.02.2011 Fix wide character filename loading in windows
-        m_pFile = _wfopen(pszFilename, L"rb");
+        m_pFile = _wfopen(pszFilename, L"rbS");
         if( !m_pFile)
         {
             PdfError e( ePdfError_FileNotFound, __FILE__, __LINE__ );
@@ -177,9 +177,14 @@ int PdfInputDevice::Look() const
 	if (m_pStream)
     return m_pStream->peek();
 	if (m_pFile) {
+#if defined(_MSC_VER) // workaround slow ftello/fseeko prior to Visual Studio 2015
+		int ch = fgetc(m_pFile);
+		ungetc(ch, m_pFile);
+#else
 		pdf_long lOffset = ftello( m_pFile );
 		int ch = GetChar();
 		fseeko( m_pFile, lOffset, SEEK_SET );
+#endif
 		return ch;
 	}
 
