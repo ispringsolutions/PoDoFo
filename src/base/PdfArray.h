@@ -339,7 +339,7 @@ void PdfArray::emplace_back( PdfObject && var )
 {
     AssertMutable();
 
-    PdfArrayBaseClass::emplace_back( var );
+    PdfArrayBaseClass::emplace_back( std::move(var) );
     m_bDirty = true;
 }
 

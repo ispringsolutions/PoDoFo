@@ -29,6 +29,8 @@
 #define PODOFO_USE_RVALUEREF 1
 #elif defined(__has_feature) && __has_feature(cxx_rvalue_references) // Any Clang version
 #define PODOFO_USE_RVALUEREF 1
+#else
+#define PODOFO_USE_RVALUEREF 0
 #endif
 
 #if PODOFO_USE_RVALUEREF

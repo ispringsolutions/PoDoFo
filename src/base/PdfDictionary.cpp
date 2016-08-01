@@ -52,8 +52,9 @@ PdfDictionary::PdfDictionary( const PdfDictionary & rhs )
 
 #if PODOFO_USE_RVALUEREF
 PdfDictionary::PdfDictionary( PdfDictionary && rhs )
-    : PdfDataType(), m_mapKeys(std::move(rhs.m_mapKeys)), m_bDirty(rhs.m_bDirty)
+    : PdfDataType(), m_bDirty(rhs.m_bDirty)
 {
+    m_mapKeys.swap(rhs.m_mapKeys);
 }
 #endif
 

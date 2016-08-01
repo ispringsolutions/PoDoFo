@@ -139,7 +139,7 @@ PdfVariant::PdfVariant( PdfArray && rArray )
 {
     Init();
     m_eDataType = ePdfDataType_Array;
-    m_Data.pData = new PdfArray(std::move(rArray));
+    m_Data.pData = new PdfArray( std::move(rArray) );
 }
 #endif
 
