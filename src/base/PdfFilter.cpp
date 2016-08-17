@@ -39,6 +39,7 @@
 #include "PdfFiltersPrivate.h"
 #include "PdfOutputStream.h"
 #include "PdfDefinesPrivate.h"
+#include "util/PdfDictionaryUtils.h"
 
 namespace PoDoFo {
 
@@ -210,6 +211,79 @@ private:
     bool                     m_bFilterFailed;
 };
 
+class PdfDecodeTransformStream : public PdfOutputStream {
+public:
+	PdfDecodeTransformStream( PdfOutputStream* pOutputStream, bool bOwnStream, const PdfArray *pDecode, pdf_int64 bitsPerComponent )
+		: m_pOutputStream(pOutputStream)
+		, m_bOwnStream(bOwnStream)
+		, m_bitsPerComponent(size_t(bitsPerComponent))
+	{
+		size_t bytesPerComponent = size_t(bitsPerComponent + 7) / 8;
+		if ( bitsPerComponent <= 0 || (pDecode->GetSize() != 2 * bytesPerComponent) )
+		{
+			PODOFO_RAISE_ERROR(ePdfError_ValueOutOfRange);
+		}
+		m_decodeTransform.resize(pDecode->GetSize());
+		for (size_t i = 0, size = pDecode->GetSize(); i < size; ++i)
+		{
+			const PdfObject &object = (*pDecode)[i];
+			if (object.IsNumber())
+			{
+				m_decodeTransform[i] = double(object.GetNumber());
+			}
+			else if (object.IsReal())
+			{
+				m_decodeTransform[i] = object.GetReal();
+			}
+			else
+			{
+				PODOFO_RAISE_ERROR(ePdfError_InvalidDataType);
+			}
+		}
+	}
+
+	virtual ~PdfDecodeTransformStream()
+	{
+		if (m_bOwnStream)
+		{
+			delete m_pOutputStream;
+		}
+	}
+
+	/** Write data to the output stream
+	*
+	*  \param pBuffer the data is read from this buffer
+	*  \param lLen    the size of the buffer
+	*/
+	virtual pdf_long Write(const char* pBuffer, pdf_long lLen)
+	{
+		std::vector<char> bufferCopy(pBuffer, pBuffer + lLen);
+
+		size_t ti = 0;
+		for (size_t bi = 0; bi < bufferCopy.size(); ++bi)
+		{
+			const pdf_int64 maxValue = (pdf_int64(1) << m_bitsPerComponent) - 1;
+			const pdf_int64 multiplier = 256 * (m_decodeTransform[ti + 1] - m_decodeTransform[ti]);
+			const pdf_int64 additive = m_decodeTransform[ti] * maxValue;
+			bufferCopy[bi] = ((bufferCopy[bi] * multiplier) >> 8) + additive;
+
+			ti = (ti + 2) % m_decodeTransform.size();
+		}
+		return m_pOutputStream->Write(&bufferCopy[0], lLen);
+	}
+
+	virtual void Close()
+	{
+		m_pOutputStream->Close();
+	}
+
+private:
+	bool m_bOwnStream;
+	PdfOutputStream* m_pOutputStream;
+	size_t m_bitsPerComponent;
+	std::vector<double> m_decodeTransform;
+};
+
 
 // -----------------------------------------------------
 // Actual PdfFilter code
@@ -337,20 +411,24 @@ PdfOutputStream* PdfFilterFactory::CreateEncodeStream( const TVecFilters & filte
 PdfOutputStream* PdfFilterFactory::CreateDecodeStream( const TVecFilters & filters, PdfOutputStream* pStream,
                                                        const PdfDictionary* pDictionary ) 
 {
-    TVecFilters::const_reverse_iterator it = filters.rbegin();
-
     PODOFO_RAISE_LOGIC_IF( !filters.size(), "Cannot create an DecodeStream from an empty list of filters" );
 
-    // TODO: support arrays and indirect objects here and the short name /DP
-    if( pDictionary && pDictionary->HasKey( "DecodeParms" ) && pDictionary->GetKey( "DecodeParms" )->IsDictionary() )
-        pDictionary = &(pDictionary->GetKey( "DecodeParms" )->GetDictionary());
+	PdfOutputStream* pTargetStream = pStream;
+	bool firstFilterOwnsStream = false;
+	if (const PdfArray * pDecode = Util::GetObjectDecode(pDictionary))
+	{
+		pTargetStream = new PdfDecodeTransformStream( pStream, false, pDecode, Util::GetObjectBitsPerComponent( pDictionary ) );
+		firstFilterOwnsStream = true;
+	}
 
-    PdfFilteredDecodeStream* pFilter = new PdfFilteredDecodeStream( pStream, *it, false, pDictionary );
+	TVecFilters::const_reverse_iterator it = filters.rbegin();
+	const PdfDictionary* pDecodeParms = Util::GetObjectDecodeParms( pDictionary );
+    PdfFilteredDecodeStream* pFilter = new PdfFilteredDecodeStream( pTargetStream, *it, firstFilterOwnsStream, pDecodeParms );
     ++it;
 
     while( it != filters.rend() ) 
     {
-        pFilter = new PdfFilteredDecodeStream( pFilter, *it, true, pDictionary );
+        pFilter = new PdfFilteredDecodeStream( pFilter, *it, true, pDecodeParms );
         ++it;
     }
 

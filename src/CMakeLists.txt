@@ -10,6 +10,7 @@ SET(PODOFO_DEPEND_TARGET CACHE INTERNAL
     "Which PoDoFo library target to depend on when building tools and tests")
 
 SET(PODOFO_BASE_SOURCES
+  base/util/PdfDictionaryUtils.cpp
   base/PdfArray.cpp
   base/PdfCanvas.cpp
   base/PdfColor.cpp
@@ -177,6 +178,7 @@ SET(PODOFO_BASE_HEADERS2
     base/util/PdfMutexImpl_win32.h
     base/util/PdfMutexImpl_pthread.h
     base/util/PdfMutexWrapper.h
+    base/util/PdfDictionaryUtils.h
     )
 
 SET(PODOFO_DOC_HEADERS
