@@ -257,6 +257,11 @@ public:
 	*/
 	virtual pdf_long Write(const char* pBuffer, pdf_long lLen)
 	{
+		if (lLen == 0)
+		{
+			return 0;
+		}
+
 		std::vector<char> bufferCopy(pBuffer, pBuffer + lLen);
 
 		size_t ti = 0;
