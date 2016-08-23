@@ -359,6 +359,8 @@ class PODOFO_API PdfObject : public PdfVariant {
     // Shared initialization between all the ctors
     void InitPdfObject();
 
+    bool HasExternalStream() const;
+
     // No touchy. Only for manipulation by PdfObject private routines.
     // Tracks whether deferred loading is still pending (in which case it'll be
     // false). If true, deferred loading is not requried or has been completed.

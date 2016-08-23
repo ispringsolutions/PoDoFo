@@ -198,6 +198,11 @@ void PdfObject::InitPdfObject()
 #endif
 }
 
+bool PdfObject::HasExternalStream() const
+{
+    return HasStream() && (const_cast<PdfObject*>(this)->GetIndirectKey("F") != 0);
+}
+
 void PdfObject::WriteObject( PdfOutputDevice* pDevice, EPdfWriteMode eWriteMode,
                              PdfEncrypt* pEncrypt, const PdfName & keyStop ) const
 {
@@ -222,7 +227,11 @@ void PdfObject::WriteObject( PdfOutputDevice* pDevice, EPdfWriteMode eWriteMode,
     {
         // Set length if it is a key
         PdfFileStream* pFileStream = dynamic_cast<PdfFileStream*>(m_pStream);
-        if( !pFileStream )
+
+        // PDF specification says:
+        // When a PDF stream object refers to an external file,
+        // the stream's contents shall not be  encrypted
+        if( !pFileStream && !HasExternalStream())
         {
             // PdfFileStream handles encryption internally
             pdf_long lLength = pEncrypt->CalculateStreamLength(m_pStream->GetLength());
