@@ -40,19 +40,5 @@ const PoDoFo::PdfDictionary * GetObjectDecodeParms(const PdfDictionary *pDiction
 	return pDictionary;
 }
 
-const PoDoFo::PdfArray * GetObjectDecode(const PdfDictionary *pDictionary)
-{
-	if (const PoDoFo::PdfArray *pDecode = GetArrayByKey(pDictionary, "Decode"))
-	{
-		return pDecode;
-	}
-	return NULL;
-}
-
-PoDoFo::pdf_int64 GetObjectBitsPerComponent(const PdfDictionary *pDictionary)
-{
-	return GetNumberByKey(pDictionary, "BitsPerComponent", 0);
-}
-
 }
 }
