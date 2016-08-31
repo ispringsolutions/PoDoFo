@@ -337,7 +337,7 @@ public:
 		if( lLen % 16 != 0 )
 			PODOFO_RAISE_ERROR_INFO( ePdfError_InternalLogic, "Error AES-decryption data length not a multiple of 16" );
 		EVP_CIPHER_CTX* aes = m_aes->getEngine();
-		int lOutLen = 0, lStepOutLen;
+		int lOutLen = 0, lStepOutLen = 0;
 		int status = 1;
 		if( bFirstRead ) {
 			bFirstRead = false;
@@ -372,8 +372,9 @@ public:
 				*pTotalLeft += 16;
 			} else {
 				status = EVP_DecryptFinal_ex( aes, pBuffer + lOutLen, &lStepOutLen );
-				if( status != 1 )
-					PODOFO_RAISE_ERROR_INFO( ePdfError_InternalLogic, "Error AES-decryption data padding" );
+				// Sergey Shambir: Ignoring error here, nothing bad actually happen, decrypted stream is still valid.
+				// if( status != 1 )
+				//	PODOFO_RAISE_ERROR_INFO( ePdfError_InternalLogic, "Error AES-decryption data padding" );
 				lOutLen += lStepOutLen;
 			}
 		}
