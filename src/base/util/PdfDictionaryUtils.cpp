@@ -9,14 +9,14 @@ const PoDoFo::PdfDictionary * GetDictionaryByKey(const PdfDictionary *pDictionar
 {
 	if (pDictionary && pDictionary->HasKey(key) && pDictionary->GetKey(key)->IsDictionary())
 		return &(pDictionary->GetKey(key)->GetDictionary());
-	return nullptr;
+	return NULL;
 }
 
 const PoDoFo::PdfArray * GetArrayByKey(const PdfDictionary *pDictionary, const PdfName &key)
 {
 	if (pDictionary && pDictionary->HasKey(key) && pDictionary->GetKey(key)->IsArray())
 		return &(pDictionary->GetKey(key)->GetArray());
-	return nullptr;
+	return NULL;
 }
 
 pdf_int64 GetNumberByKey(const PdfDictionary *pDictionary, const PdfName &key, pdf_int64 defaultValue)
