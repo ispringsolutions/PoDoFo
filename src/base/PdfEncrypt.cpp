@@ -1188,6 +1188,9 @@ PdfEncryptAESBase::BaseDecrypt(const unsigned char* key, int keyLen, const unsig
                        const unsigned char* textin, pdf_long textlen,
                        unsigned char* textout, pdf_long &outLen )
 {
+	if (textlen == 0)
+		return; // Just do nothing.
+
 	if ((textlen % 16) != 0)
 		PODOFO_RAISE_ERROR_INFO( ePdfError_InternalLogic, "Error AES-decryption data length not a multiple of 16" );
 
