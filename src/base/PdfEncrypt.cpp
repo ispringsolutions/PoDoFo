@@ -43,6 +43,7 @@
 #endif // PODOFO_HAVE_LIBIDN
 
 #include <openssl/md5.h>
+#include <openssl/err.h>
 #include <openssl/evp.h>
 #endif //PODOFO_HAVE_OPENSSL
 
@@ -311,7 +312,19 @@ private:
     PdfRC4Stream    m_stream;
 };
 
-/** A class that can encrypt/decrpyt streamed data block wise
+static std::string FormatDecryptError(unsigned long error)
+{
+	// NOTE: ERR_load_crypto_strings must be called once
+	// if you want to see human-readable strings instead of codes.
+
+	const size_t BUFFER_SIZE = 4096;
+	char errorBuffer[BUFFER_SIZE];
+	ERR_error_string_n(error, errorBuffer, BUFFER_SIZE);
+
+	return std::string("Error in AES-decryption: ") + errorBuffer;
+}
+
+/** A class that can encrypt/decrypt streamed data block wise
  *  This is used in the input and output stream encryption implementation.
  */
 class PdfAESStream : public PdfEncryptAESBase {
@@ -372,9 +385,15 @@ public:
 				*pTotalLeft += 16;
 			} else {
 				status = EVP_DecryptFinal_ex( aes, pBuffer + lOutLen, &lStepOutLen );
-				// Sergey Shambir: Ignoring error here, nothing bad actually happen, decrypted stream is still valid.
-				// if( status != 1 )
-				//	PODOFO_RAISE_ERROR_INFO( ePdfError_InternalLogic, "Error AES-decryption data padding" );
+				if ((status != 1) && (ERR_peek_error() != 0))
+				{
+					unsigned long error = ERR_get_error();
+					// Ignoring error EVP_R_BAD_DECRYPT, nothing bad actually happen and lStepOutLen == 0.
+					if (ERR_GET_REASON(error) != EVP_R_BAD_DECRYPT)
+					{
+						PODOFO_RAISE_ERROR_INFO(ePdfError_InternalLogic, FormatDecryptError(error).c_str());
+					}
+				}
 				lOutLen += lStepOutLen;
 			}
 		}
@@ -1218,7 +1237,7 @@ PdfEncryptAESBase::BaseDecrypt(const unsigned char* key, int keyLen, const unsig
     status = EVP_DecryptFinal_ex(aes, textout + outLen, &dataOutMoved);
 	outLen += dataOutMoved;
     if(status != 1)
-        PODOFO_RAISE_ERROR_INFO( ePdfError_InternalLogic, "Error AES-decryption data final" );
+        PODOFO_RAISE_ERROR_INFO( ePdfError_InternalLogic, FormatDecryptError(ERR_get_error()).c_str() );
 }
 
 void
