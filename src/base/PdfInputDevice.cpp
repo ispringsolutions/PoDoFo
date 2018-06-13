@@ -134,6 +134,7 @@ PdfInputDevice::PdfInputDevice( const std::istream* pInStream )
     {
         PODOFO_RAISE_ERROR( ePdfError_FileNotFound );
     }
+
     PdfLocaleImbue(*m_pStream);
 }
 
@@ -143,17 +144,22 @@ PdfInputDevice::~PdfInputDevice()
 
     if ( m_StreamOwned ) 
     {
-			if (m_pStream)
-        delete m_pStream;
-			if (m_pFile)
-				fclose(m_pFile);
+        if (m_pStream)
+        {
+            delete m_pStream;
+        }
+        
+        if (m_pFile)
+        {
+            fclose(m_pFile);
+        }
     }
 }
 
 void PdfInputDevice::Init()
 {
     m_pStream     = NULL;
-		m_pFile = 0;
+    m_pFile = 0;
     m_StreamOwned = false;
     m_bIsSeekable = true;
 }
@@ -166,37 +172,64 @@ void PdfInputDevice::Close()
 int PdfInputDevice::GetChar() const
 {
 	if (m_pStream)
-    return m_pStream->get();
+    {
+        return m_pStream->get();
+    }
+    
 	if (m_pFile)
+    {
 		return fgetc(m_pFile);
+    }
+    
 	return 0;
 }
 
 int PdfInputDevice::Look() const 
 {
-	if (m_pStream)
-    return m_pStream->peek();
-	if (m_pFile) {
+    if (m_pStream)
+    {
+        return m_pStream->peek();
+    }
+    
+    if (m_pFile)
+	{
 #if defined(_MSC_VER) // workaround slow ftello/fseeko prior to Visual Studio 2015
 		int ch = fgetc(m_pFile);
 		ungetc(ch, m_pFile);
 #else
-		pdf_long lOffset = ftello( m_pFile );
-		int ch = GetChar();
-		fseeko( m_pFile, lOffset, SEEK_SET );
-#endif
-		return ch;
-	}
+        pdf_long lOffset = ftello( m_pFile );
+        
+        if( lOffset == -1 )
+        {    
+            PODOFO_RAISE_ERROR_INFO( ePdfError_InvalidDeviceOperation, "Failed to read the current file position" );
+        }
 
-	return 0;
+        int ch = GetChar();
+
+        if( fseeko( m_pFile, lOffset, SEEK_SET ) == -1 )
+        {
+            PODOFO_RAISE_ERROR_INFO( ePdfError_InvalidDeviceOperation, "Failed to seek back to the previous position" );
+        }
+#endif
+        
+        return ch;
+    }
+
+    return 0;
 }
 
 std::streamoff PdfInputDevice::Tell() const
 {
 	if (m_pStream)
-    return m_pStream->tellg();
+    {
+        return m_pStream->tellg();
+    }
+    
 	if (m_pFile)
+    {
 		return ftello(m_pFile);
+    }
+    
 	return 0;
 }
 /*
@@ -221,20 +254,18 @@ void PdfInputDevice::Seek( std::streamoff off, std::ios_base::seekdir dir )
         if (m_pFile)
         {
             int whence;
-            switch( dir )
+
+            if( dir == std::ios_base::beg )
+                whence = SEEK_SET;
+            else if( dir == std::ios_base::cur )
+                whence = SEEK_CUR;
+            else // if( dir == std::ios_base::end )
+                whence = SEEK_END;
+            
+            if( fseeko( m_pFile, off, whence ) == -1)
             {
-                default:
-                case std::ios_base::beg:
-                    whence = SEEK_SET;
-                    break;
-                case std::ios_base::end:
-                    whence = SEEK_END;
-                    break;
-                case std::ios_base::cur:
-                    whence = SEEK_CUR;
-                    break;
+                PODOFO_RAISE_ERROR_INFO( ePdfError_InvalidDeviceOperation, "Failed to seek to given position in the file" );
             }
-            fseeko( m_pFile, off, whence );
         }
     }
     else
@@ -247,8 +278,8 @@ void PdfInputDevice::Seek( std::streamoff off, std::ios_base::seekdir dir )
 std::streamoff PdfInputDevice::Read( char* pBuffer, std::streamsize lLen )
 {
 	if (m_pStream) {
-    m_pStream->read( pBuffer, lLen );
-    return m_pStream->gcount();
+        m_pStream->read( pBuffer, lLen );
+        return m_pStream->gcount();
 	}
 	else 
 	{

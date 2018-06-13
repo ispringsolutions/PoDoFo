@@ -40,6 +40,7 @@
 #include "PdfStream.h"
 #include "PdfVecObjects.h"
 
+#include <limits>
 #include <algorithm>
 
 #if defined(PODOFO_VERBOSE_DEBUG)
@@ -76,7 +77,7 @@ void PdfObjectStreamParserObject::Parse(ObjectIdList const & list)
         delete m_vecObjects->RemoveObject( m_pParser->Reference() );
         m_pParser = NULL;
 
-    } catch( const PdfError & rError ) {
+    } catch( PdfError & rError ) {
         podofo_free( pBuffer );
         throw rError;
     }
@@ -95,6 +96,12 @@ void PdfObjectStreamParserObject::ReadObjectsFromStream( char* pBuffer, pdf_long
         const pdf_int64 lOff     = tokenizer.GetNextNumber();
         const std::streamoff pos = device.Device()->Tell();
 
+        if( lFirst >= std::numeric_limits<pdf_int64>::max() - lOff )
+        {
+            PODOFO_RAISE_ERROR_INFO( ePdfError_BrokenFile,
+                                    "Object position out of max limit" );
+        }
+
         // move to the position of the object in the stream
         device.Device()->Seek( static_cast<std::streamoff>(lFirst + lOff) );
 
@@ -102,7 +109,10 @@ void PdfObjectStreamParserObject::ReadObjectsFromStream( char* pBuffer, pdf_long
 	    PdfTokenizer variantTokenizer( device, m_buffer );
 		if( m_pEncrypt && (m_pEncrypt->GetEncryptAlgorithm() == PdfEncrypt::ePdfEncryptAlgorithm_AESV2
 			|| m_pEncrypt->GetEncryptAlgorithm() == PdfEncrypt::ePdfEncryptAlgorithm_AESV3
-			|| m_pEncrypt->GetEncryptAlgorithm() == PdfEncrypt::ePdfEncryptAlgorithm_RC4V2) )
+#ifndef PODOFO_HAVE_OPENSSL_NO_RC4
+			|| m_pEncrypt->GetEncryptAlgorithm() == PdfEncrypt::ePdfEncryptAlgorithm_RC4V2 
+#endif // PODOFO_HAVE_OPENSSL_NO_RC4
+			                                                                              ) )
 			variantTokenizer.GetNextVariant( var, 0 ); // Stream is already decrypted
 		else
 			variantTokenizer.GetNextVariant( var, m_pEncrypt );
@@ -116,7 +126,7 @@ void PdfObjectStreamParserObject::ReadObjectsFromStream( char* pBuffer, pdf_long
         {
 			if(m_vecObjects->GetObject(PdfReference( static_cast<int>(lObj), PODOFO_LL_LITERAL(0) ))) 
             {
-                PdfError::LogMessage( eLogSeverity_Warning, "Object: %li 0 R will be deleted and loaded again.\n", lObj );
+                PdfError::LogMessage( eLogSeverity_Warning, "Object: %" PDF_FORMAT_INT64 " 0 R will be deleted and loaded again.\n", lObj );
                 delete m_vecObjects->RemoveObject(PdfReference( static_cast<int>(lObj), PODOFO_LL_LITERAL(0) ),false);
             }
             m_vecObjects->insert_sorted( new PdfObject( PdfReference( static_cast<int>(lObj), PODOFO_LL_LITERAL(0) ), var ) );

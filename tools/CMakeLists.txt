@@ -17,3 +17,7 @@ SUBDIRS(
 	podofoincrementalupdates
 	podofoxmp
 	)
+
+IF(PODOFO_HAVE_OPENSSL)
+	SUBDIRS(podofosign)
+ENDIF(PODOFO_HAVE_OPENSSL)

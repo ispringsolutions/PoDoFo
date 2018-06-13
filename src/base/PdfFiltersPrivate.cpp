@@ -255,6 +255,11 @@ private:
 // Hex
 // -------------------------------------------------------
 
+PdfHexFilter::PdfHexFilter()
+    : m_cDecodedByte( 0 ), m_bLow( true )
+{
+}
+
 void PdfHexFilter::EncodeBlockImpl( const char* pBuffer, pdf_long lLen )
 {
     char data[2];
@@ -325,6 +330,11 @@ void PdfHexFilter::EndDecodeImpl()
 // based on public domain software from:
 // Paul Haahr - http://www.webcom.com/~haahr/
 // -------------------------------------------------------
+
+PdfAscii85Filter::PdfAscii85Filter()
+    : m_count( 0 ), m_tuple( 0 )
+{
+}
 
 void PdfAscii85Filter::EncodeTuple( unsigned long tuple, int count )
 {
@@ -631,6 +641,11 @@ void PdfFlateFilter::EndDecodeImpl()
 // RLE
 // -------------------------------------------------------
 
+PdfRLEFilter::PdfRLEFilter()
+    : m_nCodeLen( 0 )
+{
+}
+
 void PdfRLEFilter::BeginEncodeImpl()
 {
     PODOFO_RAISE_ERROR( ePdfError_UnsupportedFilter );
@@ -887,6 +902,8 @@ void JPegErrorOutput(j_common_ptr, int)
 PdfDCTFilter::PdfDCTFilter()
     : m_pDevice( NULL )
 {
+    memset( &m_cinfo, 0, sizeof( struct jpeg_decompress_struct ) );
+    memset( &m_jerr, 0, sizeof( struct jpeg_error_mgr ) );
 }
 
 PdfDCTFilter::~PdfDCTFilter()
@@ -1281,9 +1298,9 @@ void PdfCCITTFilter::BeginDecodeImpl( const PdfDictionary* pDict )
     }
     */
 
+#else // DS_CCITT_DEVELOPMENT_CODE
+    PODOFO_RAISE_ERROR( ePdfError_UnsupportedFilter );
 #endif // DS_CCITT_DEVELOPMENT_CODE
-
-
 }
 #ifndef _MSC_VER
 #pragma GCC diagnostic pop
@@ -1291,11 +1308,12 @@ void PdfCCITTFilter::BeginDecodeImpl( const PdfDictionary* pDict )
 
 void PdfCCITTFilter::DecodeBlockImpl( const char*, pdf_long )
 {
-
+    PODOFO_RAISE_ERROR( ePdfError_UnsupportedFilter );
 }
 
 void PdfCCITTFilter::EndDecodeImpl()
 {
+    PODOFO_RAISE_ERROR( ePdfError_UnsupportedFilter );
 }
 
 #endif // PODOFO_HAVE_TIFF_LIB

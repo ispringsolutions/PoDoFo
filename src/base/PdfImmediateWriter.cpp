@@ -123,7 +123,7 @@ void PdfImmediateWriter::Finish()
     this->WritePdfObjects( m_pDevice, *m_pParent, m_pXRef );
 
     // write the XRef
-    pdf_long lXRefOffset = m_pDevice->Tell();
+    pdf_uint64 lXRefOffset = static_cast<pdf_uint64>( m_pDevice->Tell() );
     m_pXRef->Write( m_pDevice );
             
     // XRef streams contain the trailer in the XRef
@@ -132,13 +132,13 @@ void PdfImmediateWriter::Finish()
         PdfObject trailer;
         
         // if we have a dummy offset we write also a prev entry to the trailer
-        FillTrailerObject( &trailer, m_pXRef->GetSize(), false, false );
+        FillTrailerObject( &trailer, m_pXRef->GetSize(), false );
         
         m_pDevice->Print("trailer\n");
         trailer.WriteObject( m_pDevice, this->GetWriteMode(), NULL );
     }
     
-    m_pDevice->Print( "startxref\n%li\n%%%%EOF\n", lXRefOffset );
+    m_pDevice->Print( "startxref\n%" PDF_FORMAT_UINT64 "\n%%%%EOF\n", lXRefOffset );
     m_pDevice->Flush();
 
     // we are done now
@@ -172,7 +172,7 @@ void PdfImmediateWriter::BeginAppendStream( const PdfStream* pStream )
     if( pFileStream ) 
     {
         // Only one open file stream is allowed at a time
-        assert( !m_bOpenStream );
+        PODOFO_ASSERT( !m_bOpenStream );
         m_bOpenStream = true;
 
         if( m_pEncrypt )
@@ -186,7 +186,7 @@ void PdfImmediateWriter::EndAppendStream( const PdfStream* pStream )
     if( pFileStream ) 
     {
         // A PdfFileStream has to be opened before
-        assert( m_bOpenStream );
+        PODOFO_ASSERT( m_bOpenStream );
         m_bOpenStream = false;
     }
 }

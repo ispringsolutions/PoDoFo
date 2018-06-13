@@ -142,6 +142,7 @@ void PdfDictionary::Clear()
         }
 
         m_mapKeys.clear();
+        m_bDirty = true;
     }
 }
 
@@ -197,28 +198,32 @@ void PdfDictionary::AddKey( const PdfName & identifier, const PdfObject* pObject
 
 const PdfObject* PdfDictionary::GetKey( const PdfName & key ) const
 {
+    if( !key.GetLength() )
+        return NULL;
+
     TCIKeyMap it;
 
-    if( HasKey( key ) )
-    {
-        it = m_mapKeys.find( key );
-        return (*it).second;
-    }
-    
-    return NULL;
+    it = m_mapKeys.find( key );
+
+    if( it == m_mapKeys.end() )
+        return NULL;
+
+    return (*it).second;
 }
 
 PdfObject* PdfDictionary::GetKey( const PdfName & key )
 {
+    if( !key.GetLength() )
+        return NULL;
+
     TIKeyMap it;
 
-    if( HasKey( key ) )
-    {
-        it = m_mapKeys.find( key );
-        return (*it).second;
-    }
-    
-    return NULL;
+    it = m_mapKeys.find( key );
+
+    if( it == m_mapKeys.end() )
+        return NULL;
+
+    return (*it).second;
 }
 
 pdf_int64 PdfDictionary::GetKeyAsLong( const PdfName & key, pdf_int64 lDefault ) const
@@ -368,6 +373,16 @@ void PdfDictionary::SetDirty( bool bDirty )
             ++it;
         }
     }
+}
+
+TCIKeyMap PdfDictionary::begin() const
+{
+    return m_mapKeys.begin();
+}
+
+TCIKeyMap PdfDictionary::end() const
+{
+    return m_mapKeys.end();
 }
 
 };

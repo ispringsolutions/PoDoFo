@@ -156,9 +156,6 @@ void PdfField::Init( PdfAcroForm* pParent )
         break;
     }
 
-
-    m_pWidget->SetBorderStyle( 0.0, 0.0, 5.0 );
-
     // Create a unique fieldname, because Acrobat Reader crashes if the field has no field name 
     std::ostringstream out;
     PdfLocaleImbue(out);
@@ -894,7 +891,7 @@ const PdfString PdfListField::GetItemDisplayText( int nIndex ) const
     if( m_pObject->GetDictionary().HasKey( PdfName("Opt") ) )
         opt = m_pObject->GetDictionary().GetKey( PdfName("Opt") )->GetArray();
     
-    if( nIndex < 0 || nIndex > static_cast<int>(opt.size()) )
+    if( nIndex < 0 || nIndex >= static_cast<int>(opt.size()) )
     {
         PODOFO_RAISE_ERROR( ePdfError_ValueOutOfRange );
     }

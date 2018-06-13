@@ -48,6 +48,8 @@ using namespace std;
 
 namespace PoDoFo {
 
+enum EPdfFilter PdfStream::eDefaultFilter = ePdfFilter_FlateDecode;
+
 PdfStream::PdfStream( PdfObject* pParent )
     : m_pParent( pParent ), m_bAppend( false )
 {
@@ -69,7 +71,7 @@ void PdfStream::GetFilteredCopy( PdfOutputStream* pStream ) const
             pDecodeStream->Write( const_cast<char*>(this->GetInternalBuffer()), this->GetInternalBufferSize() );
             pDecodeStream->Close();
         }
-        catch( const PdfError & e ) 
+        catch( PdfError & e ) 
         {
             delete pDecodeStream;
             throw e;
@@ -138,7 +140,9 @@ void PdfStream::Set( const char* szBuffer, pdf_long lLen )
 void PdfStream::Set( PdfInputStream* pStream )
 {
     TVecFilters vecFilters;
-    vecFilters.push_back( ePdfFilter_FlateDecode );
+
+    if( eDefaultFilter != ePdfFilter_None )
+        vecFilters.push_back( eDefaultFilter );
 
     this->Set( pStream, vecFilters );
 }
@@ -191,7 +195,9 @@ void PdfStream::SetRawData( PdfInputStream* pStream, pdf_long lLen )
 void PdfStream::BeginAppend( bool bClearExisting )
 {
     TVecFilters vecFilters;
-    vecFilters.push_back( ePdfFilter_FlateDecode );
+
+    if( eDefaultFilter != ePdfFilter_None )
+        vecFilters.push_back( eDefaultFilter );
 
     this->BeginAppend( vecFilters, bClearExisting );
 }

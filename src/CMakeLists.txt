@@ -43,7 +43,6 @@ SET(PODOFO_BASE_SOURCES
   base/PdfRefCountedBuffer.cpp
   base/PdfRefCountedInputDevice.cpp
   base/PdfReference.cpp
-  base/PdfSigIncWriter.cpp
   base/PdfStream.cpp
   base/PdfString.cpp
   base/PdfTokenizer.cpp
@@ -98,9 +97,6 @@ SET(PODOFO_DOC_SOURCES
   doc/PdfPainter.cpp
   doc/PdfPainterMM.cpp
   doc/PdfShadingPattern.cpp
-  doc/PdfSigIncMemDocument.cpp
-  doc/PdfSigIncPainter.cpp
-  doc/PdfSigIncSignatureField.cpp
   doc/PdfSignOutputDevice.cpp
   doc/PdfSignatureField.cpp
   doc/PdfStreamedDocument.cpp
@@ -158,7 +154,6 @@ SET(PODOFO_BASE_HEADERS
    base/PdfRefCountedBuffer.h
    base/PdfRefCountedInputDevice.h
    base/PdfReference.h
-   base/PdfSigIncWriter.h
    base/PdfStream.h
    base/PdfString.h
    base/PdfTokenizer.h
@@ -225,9 +220,6 @@ SET(PODOFO_DOC_HEADERS
   doc/PdfPainter.h
   doc/PdfPainterMM.h
   doc/PdfShadingPattern.h
-  doc/PdfSigIncMemDocument.h
-  doc/PdfSigIncPainter.h
-  doc/PdfSigIncSignatureField.h
   doc/PdfSignOutputDevice.h
   doc/PdfSignatureField.h
   doc/PdfStreamedDocument.h
@@ -236,14 +228,17 @@ SET(PODOFO_DOC_HEADERS
   doc/PdfXObject.h
   )
 
+SET(PODOFO_HEADER_FILES
+  ${PODOFO_HEADERS}
+  ${PODOFO_BASE_HEADERS}
+  ${PODOFO_BASE_HEADERS2}
+  ${PODOFO_DOC_HEADERS}
+  )
+
 # Create a Source Group for Visual Studio
 # so that headers are listed in the folder view
 # and are easier accessible
-SOURCE_GROUP(Headers FILES 
-  ${PODOFO_HEADERS} 
-  ${PODOFO_BASE_HEADERS} 
-  ${PODOFO_BASE_HEADERS2} 
-  ${PODOFO_DOC_HEADERS})
+SOURCE_GROUP("Header Files" FILES ${PODOFO_HEADER_FILES})
 
 INSTALL(FILES ${PODOFO_HEADERS}
   DESTINATION "include/podofo"
@@ -267,7 +262,7 @@ ENDIF(NOT PODOFO_BUILD_SHARED AND NOT PODOFO_BUILD_STATIC)
 
 IF(PODOFO_BUILD_STATIC)
     MESSAGE("Building static PoDoFo library")
-    ADD_LIBRARY(podofo_static STATIC ${PODOFO_BASE_SOURCES} ${PODOFO_DOC_SOURCES})
+    ADD_LIBRARY(podofo_static STATIC ${PODOFO_BASE_SOURCES} ${PODOFO_DOC_SOURCES} ${PODOFO_HEADER_FILES})
     TARGET_LINK_LIBRARIES(podofo_static ${PODOFO_LIB_DEPENDS})
     SET_TARGET_PROPERTIES(podofo_static PROPERTIES
         VERSION "${PODOFO_LIBVERSION}"
@@ -288,7 +283,7 @@ ENDIF(PODOFO_BUILD_STATIC)
 
 IF(PODOFO_BUILD_SHARED)
     MESSAGE("Building shared PoDoFo library")
-    ADD_LIBRARY(podofo_shared SHARED ${PODOFO_BASE_SOURCES} ${PODOFO_DOC_SOURCES})
+    ADD_LIBRARY(podofo_shared SHARED ${PODOFO_BASE_SOURCES} ${PODOFO_DOC_SOURCES} ${PODOFO_HEADER_FILES})
     TARGET_LINK_LIBRARIES(podofo_shared ${PODOFO_LIB_DEPENDS})
     # TODO: set /wd4251 flag if we're doing a debug build with
     # Visual Studio, since it produces invalid warnings about STL
@@ -310,6 +305,25 @@ IF(PODOFO_BUILD_SHARED)
         LIBRARY DESTINATION "${LIBDIRNAME}"
         ARCHIVE DESTINATION "${LIBDIRNAME}"
         )
+
+
+      # Create a pkg-config file for linking against shared library
+      # if pkg-config is available on the system.
+      # Add a version to the file name corresponding to the API compatibility.
+
+      FIND_PROGRAM(PKG_CONFIG_FOUND pkg-config)
+      IF(PKG_CONFIG_FOUND)
+        MESSAGE("Pkg-config found, creating a pkg-config file for linking against shared library.")
+        CONFIGURE_FILE(
+          "libpodofo.pc.in"
+          "${PoDoFo_BINARY_DIR}/libpodofo-${PODOFO_VERSION_MAJOR}.pc"
+          @ONLY)
+        INSTALL(
+          FILES "${PoDoFo_BINARY_DIR}/libpodofo-${PODOFO_VERSION_MAJOR}.pc"
+          DESTINATION "${LIBDIRNAME}/pkgconfig")
+      ELSE(PKG_CONFIG_FOUND)
+        MESSAGE("Pkg-config not found. No pkg-config file will be created.")
+      ENDIF(PKG_CONFIG_FOUND)
 ENDIF(PODOFO_BUILD_SHARED)
 
 # Use these flags when compiling code that includes PoDoFo headers.

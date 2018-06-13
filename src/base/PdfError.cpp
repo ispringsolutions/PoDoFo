@@ -60,6 +60,12 @@ PdfErrorInfo::PdfErrorInfo()
 {
 }
 
+PdfErrorInfo::PdfErrorInfo( int line, const char* pszFile, std::string sInfo )
+    : m_nLine( line ), m_sFile( pszFile ? pszFile : "" ), m_sInfo( sInfo )
+{
+
+}
+
 PdfErrorInfo::PdfErrorInfo( int line, const char* pszFile, const char* pszInfo )
     : m_nLine( line ), m_sFile( pszFile ? pszFile : "" ), m_sInfo( pszInfo ? pszInfo : "" )
 {
@@ -93,6 +99,12 @@ const PdfErrorInfo & PdfErrorInfo::operator=( const PdfErrorInfo & rhs )
 PdfError::PdfError()
 {
     m_error = ePdfError_ErrOk;
+}
+
+PdfError::PdfError( const EPdfError & eCode, const char* pszFile, int line, 
+                    std::string sInformation )
+{
+    this->SetError( eCode, pszFile, line, sInformation );
 }
 
 PdfError::PdfError( const EPdfError & eCode, const char* pszFile, int line, 
@@ -222,6 +234,9 @@ const char* PdfError::ErrorName( EPdfError eCode )
         case ePdfError_InvalidEnumValue:
             pszMsg = "ePdfError_InvalidEnumValue";
             break;
+        case ePdfError_BrokenFile:
+            pszMsg = "ePdfError_BrokenFile";
+            break;
         case ePdfError_PageNotFound:
             pszMsg = "ePdfError_PageNotFound";
             break;
@@ -345,6 +360,12 @@ const char* PdfError::ErrorName( EPdfError eCode )
         case ePdfError_OutlineItemAlreadyPresent:
             pszMsg = "ePdfError_OutlineItemAlreadyPresent"; 
             break;
+        case ePdfError_NotLoadedForUpdate:
+            pszMsg = "ePdfError_NotLoadedForUpdate"; 
+            break;
+        case ePdfError_CannotEncryptedForUpdate:
+            pszMsg = "ePdfError_CannotEncryptedForUpdate"; 
+            break;
         case ePdfError_Unknown:
             pszMsg = "ePdfError_Unknown"; 
             break;
@@ -390,6 +411,9 @@ const char* PdfError::ErrorMessage( EPdfError eCode )
             break;
         case ePdfError_InvalidEnumValue:
             pszMsg = "An invalid enum value was specified.";
+            break;
+        case ePdfError_BrokenFile:
+            pszMsg = "The file content is broken.";
             break;
         case ePdfError_PageNotFound:
             pszMsg = "The requested page could not be found in the PDF.";
@@ -483,6 +507,12 @@ const char* PdfError::ErrorMessage( EPdfError eCode )
             break;
         case ePdfError_OutlineItemAlreadyPresent:
             pszMsg = "Given OutlineItem already present in destination tree.";
+            break;
+        case ePdfError_NotLoadedForUpdate:
+            pszMsg = "The document had not been loaded for update.";
+            break;
+        case ePdfError_CannotEncryptedForUpdate:
+            pszMsg = "Cannot load encrypted documents for update.";
             break;
         case ePdfError_Unknown:
             pszMsg = "Error code unknown.";

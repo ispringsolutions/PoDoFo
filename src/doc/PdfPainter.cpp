@@ -111,7 +111,7 @@ static inline bool IsSpaceChar(pdf_utf16be ch)
 PdfPainter::PdfPainter()
 : m_pCanvas( NULL ), m_pPage( NULL ), m_pFont( NULL ), m_nTabWidth( 4 ),
   m_curColor( PdfColor( 0.0, 0.0, 0.0 ) ),
-  m_isTextOpen( false ), m_oss(), m_curPath()
+  m_isTextOpen( false ), m_oss(), m_curPath(), m_isCurColorICCDepend( false ), m_CSTag()
 {
     m_oss.flags( std::ios_base::fixed );
     m_oss.precision( clPainterDefaultPrecision );
@@ -146,7 +146,9 @@ PdfPainter::~PdfPainter()
         PdfError::LogMessage( eLogSeverity_Error, 
                               "PdfPainter::~PdfPainter(): FinishPage() has to be called after a page is completed!" );
 
-    assert(!m_pCanvas);
+    #ifdef DEBUG
+    PODOFO_ASSERT( !m_pCanvas );
+    #endif
 }
 
 void PdfPainter::SetPage( PdfCanvas* pPage )
@@ -187,7 +189,7 @@ void PdfPainter::FinishPage()
 	try { 
 		if( m_pCanvas )
 			m_pCanvas->EndAppend();
-	} catch( const PdfError & e ) {
+	} catch( PdfError & e ) {
 	    // clean up, even in case of error
 		m_pCanvas = NULL;
 		m_pPage   = NULL;
@@ -371,6 +373,8 @@ void PdfPainter::SetStrokingColor( const PdfColor & rColor )
 void PdfPainter::SetColor( const PdfColor & rColor )
 {
     PODOFO_RAISE_LOGIC_IF( !m_pCanvas, "Call SetPage() first before doing drawing operations." );    
+
+    m_isCurColorICCDepend = false;
 
     m_oss.str("");
 
@@ -923,7 +927,7 @@ void PdfPainter::EndText()
 }
 
 void PdfPainter::DrawMultiLineText( double dX, double dY, double dWidth, double dHeight, const PdfString & rsText, 
-                                    EPdfAlignment eAlignment, EPdfVerticalAlignment eVertical, bool bClip )
+                                    EPdfAlignment eAlignment, EPdfVerticalAlignment eVertical, bool bClip, bool bSkipSpaces )
 {
     PODOFO_RAISE_LOGIC_IF( !m_pCanvas, "Call SetPage() first before doing drawing operations." );
 
@@ -946,7 +950,7 @@ void PdfPainter::DrawMultiLineText( double dX, double dY, double dWidth, double 
 
     PdfString   sString  = this->ExpandTabs( rsText, rsText.GetCharacterLength() );
 
-	std::vector<PdfString> vecLines = GetMultiLineTextAsLines(dWidth, sString);
+	std::vector<PdfString> vecLines = GetMultiLineTextAsLines( dWidth, sString, bSkipSpaces );
     double dLineGap = m_pFont->GetFontMetrics()->GetLineSpacing() - m_pFont->GetFontMetrics()->GetAscent() + m_pFont->GetFontMetrics()->GetDescent();
     // Do vertical alignment
     switch( eVertical ) 
@@ -975,7 +979,7 @@ void PdfPainter::DrawMultiLineText( double dX, double dY, double dWidth, double 
     this->Restore();
 }
 
-std::vector<PdfString> PdfPainter::GetMultiLineTextAsLines( double dWidth, const PdfString & rsText)
+std::vector<PdfString> PdfPainter::GetMultiLineTextAsLines( double dWidth, const PdfString & rsText, bool bSkipSpaces )
 {
     PODOFO_RAISE_LOGIC_IF( !m_pCanvas, "Call SetPage() first before doing drawing operations." );
 
@@ -994,11 +998,11 @@ std::vector<PdfString> PdfPainter::GetMultiLineTextAsLines( double dWidth, const
     // fast and easy individual characters access    
     const std::string& stringUtf8 = rsText.GetStringUtf8();
     std::vector<pdf_utf16be> stringUtf16(stringUtf8.length() + 1, 0);
-	assert(stringUtf16.size() > 0);	
+    PODOFO_ASSERT( stringUtf16.size() > 0 );
     const pdf_long converted = PdfString::ConvertUTF8toUTF16(
 	    reinterpret_cast<const pdf_utf8*>(stringUtf8.c_str()), &stringUtf16[0], stringUtf16.size());
 	//const pdf_long len = rsText.GetCharacterLength();
-    assert( converted == (rsText.GetCharacterLength() + 1) );
+    PODOFO_ASSERT( converted == (rsText.GetCharacterLength() + 1) );
 
 	const pdf_utf16be* const stringUtf16Begin = &stringUtf16[0];
     const pdf_utf16be* pszLineBegin = stringUtf16Begin;
@@ -1032,11 +1036,19 @@ std::vector<PdfString> PdfPainter::GetMultiLineTextAsLines( double dWidth, const
                 else
                 {
                     vecLines.push_back( PdfString( pszLineBegin, pszCurrentCharacter - pszLineBegin ) );
-                    // Skip all spaces at the end of the line
-                    while (IsSpaceChar(*(pszCurrentCharacter + 1)))
-                        pszCurrentCharacter++;
+                    if (bSkipSpaces)
+                    {
+                        // Skip all spaces at the end of the line
+                        while( IsSpaceChar( *( pszCurrentCharacter + 1 ) ) )
+                            pszCurrentCharacter++;
 
-                    pszStartOfCurrentWord = pszCurrentCharacter + 1;
+                        pszStartOfCurrentWord = pszCurrentCharacter + 1;
+                    }
+                    else
+                    {
+                        pszStartOfCurrentWord = pszCurrentCharacter;
+                    }
+                    startOfWord=true;
                 }
                 pszLineBegin = pszStartOfCurrentWord;
 
@@ -1049,6 +1061,25 @@ std::vector<PdfString> PdfPainter::GetMultiLineTextAsLines( double dWidth, const
                 {
                     dCurWidthOfLine = 0.0;
                 }
+            }
+            else if( ( dCurWidthOfLine + m_pFont->GetFontMetrics()->UnicodeCharWidth( SwapCharBytesIfRequired( *pszCurrentCharacter ) ) ) > dWidth )
+            {
+                vecLines.push_back( PdfString( pszLineBegin, pszCurrentCharacter - pszLineBegin ) );
+                if( bSkipSpaces )
+                {
+                    // Skip all spaces at the end of the line
+                    while( IsSpaceChar( *( pszCurrentCharacter + 1 ) ) )
+                        pszCurrentCharacter++;
+
+                    pszStartOfCurrentWord = pszCurrentCharacter + 1;
+                }
+                else
+                {
+                    pszStartOfCurrentWord = pszCurrentCharacter;
+                }
+                pszLineBegin = pszStartOfCurrentWord;
+                startOfWord = true;
+                dCurWidthOfLine = 0.0;
             }
             else 
             {           
@@ -1291,7 +1322,7 @@ void PdfPainter::DrawGlyph( PdfMemDocument* pDocument, double dX, double dY, con
 
 void PdfPainter::DrawImage( double dX, double dY, PdfImage* pObject, double dScaleX, double dScaleY )
 {
-    this->DrawXObject( dX, dY, reinterpret_cast<PdfXObject*>(pObject), 
+    this->DrawXObject( dX, dY, pObject, 
                        dScaleX * pObject->GetPageSize().GetWidth(), 
                        dScaleY * pObject->GetPageSize().GetHeight() );
 }
@@ -1782,7 +1813,20 @@ void PdfPainter::ConvertRectToBezier( double dX, double dY, double dWidth, doubl
 
 void PdfPainter::SetCurrentStrokingColor()
 {
-	SetStrokingColor( m_curColor );
+    if ( m_isCurColorICCDepend )
+    {
+        m_oss.str("");
+        m_oss << "/" << m_CSTag     << " CS ";
+        m_oss << m_curColor.GetRed()   << " "
+              << m_curColor.GetGreen() << " "
+              << m_curColor.GetBlue()
+              << " SC" << std::endl;
+        m_pCanvas->Append( m_oss.str() );
+    }
+    else
+    {
+        SetStrokingColor( m_curColor );
+    }
 }
 
 void PdfPainter::SetTransformationMatrix( double a, double b, double c, double d, double e, double f )
@@ -1822,6 +1866,21 @@ void PdfPainter::SetRenderingIntent( char* intent )
     m_oss.str("");
     m_oss << "/" << intent
           << " ri" << std::endl;
+    m_pCanvas->Append( m_oss.str() );
+}
+
+void PdfPainter::SetDependICCProfileColor( const PdfColor &rColor, const std::string &pCSTag )
+{
+    m_isCurColorICCDepend = true;
+    m_curColor = rColor;
+    m_CSTag = pCSTag;
+
+    m_oss.str("");
+    m_oss << "/" << m_CSTag << " cs ";
+    m_oss << rColor.GetRed()   << " "
+          << rColor.GetGreen() << " "
+          << rColor.GetBlue()
+          << " sc" << std::endl;
     m_pCanvas->Append( m_oss.str() );
 }
 
@@ -1937,16 +1996,27 @@ PdfString PdfPainter::ExpandTabs( const PdfString & rsString, pdf_long lStringLe
     const pdf_utf16be cTab     = 0x0900;
     const pdf_utf16be cSpace   = 0x2000;
 
+    if( lStringLen == -1 )
+        lStringLen = rsString.GetCharacterLength();
+
+    if (lStringLen > rsString.GetCharacterLength())
+    {
+        PdfError::DebugMessage( "Requested to expand tabs in string of %" PDF_FORMAT_INT64 " chars, while it has only %" PDF_FORMAT_INT64 "; correcting the value\n",
+            static_cast<pdf_int64>( lStringLen ), static_cast<pdf_int64>( rsString.GetCharacterLength() ) );
+
+        lStringLen = rsString.GetCharacterLength();
+    }
+
     // count the number of tabs in the string
     if( bUnicode ) 
     {
-        for( i=0;i<=lStringLen;i++ )
+        for( i=0;i<lStringLen;i++ )
             if( rsString.GetUnicode()[i] == cTab ) 
                 ++nTabCnt;
     }
     else
     {
-        for( i=0;i<=lStringLen;i++ )
+        for( i=0;i<lStringLen;i++ )
             if( rsString.GetString()[i] == '\t' )
                 ++nTabCnt;
     }

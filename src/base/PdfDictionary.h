@@ -265,6 +265,11 @@ class PODOFO_API PdfDictionary : public PdfDataType {
     void Write( PdfOutputDevice* pDevice, EPdfWriteMode eWriteMode, 
                 const PdfEncrypt* pEncrypt, const PdfName & keyStop = PdfName::KeyNull ) const;
 
+    /**
+    *  \returns the size of the internal map
+    */
+    inline size_t GetSize() const;
+
     /** Get access to the internal map of keys.
      *
      * \returns all keys of this dictionary
@@ -298,6 +303,10 @@ class PODOFO_API PdfDictionary : public PdfDataType {
      */
     virtual void SetDirty( bool bDirty );
 
+ public:
+     TCIKeyMap begin() const;
+     TCIKeyMap end() const;
+
  private: 
     TKeyMap      m_mapKeys; 
 
@@ -307,6 +316,11 @@ class PODOFO_API PdfDictionary : public PdfDataType {
 typedef std::vector<PdfDictionary*>      TVecDictionaries; 
 typedef	TVecDictionaries::iterator       TIVecDictionaries; 
 typedef	TVecDictionaries::const_iterator TCIVecDictionaries;
+
+size_t PdfDictionary::GetSize() const
+{
+    return m_mapKeys.size();
+}
 
 // -----------------------------------------------------
 // 

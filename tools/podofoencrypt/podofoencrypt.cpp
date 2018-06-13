@@ -43,17 +43,21 @@ void encrypt( const char* pszInput, const char* pszOutput,
     EPdfVersion   eVersion;
     switch( eAlgorithm ) 
     {
+#ifndef PODOFO_HAVE_OPENSSL_NO_RC4
         case PdfEncrypt::ePdfEncryptAlgorithm_RC4V1:
             eKeyLength = PdfEncrypt::ePdfKeyLength_40;
             eVersion   = ePdfVersion_1_3;
             break;
+#endif // PODOFO_HAVE_OPENSSL_NO_RC4
 #ifdef PODOFO_HAVE_LIBIDN
         case PdfEncrypt::ePdfEncryptAlgorithm_AESV3:;
             eKeyLength = PdfEncrypt::ePdfKeyLength_256;
             eVersion   = ePdfVersion_1_7;
             break;
 #endif // PODOFO_HAVE_LIBIDN
+#ifndef PODOFO_HAVE_OPENSSL_NO_RC4
         case PdfEncrypt::ePdfEncryptAlgorithm_RC4V2:
+#endif // PODOFO_HAVE_OPENSSL_NO_RC4
         case PdfEncrypt::ePdfEncryptAlgorithm_AESV2:
         default:
             eKeyLength = PdfEncrypt::ePdfKeyLength_128;
@@ -88,9 +92,9 @@ void print_help()
     printf("       -o <password> The required owner password\n");
     printf(" Permissions:\n");
     printf("       --print       Allow printing the document\n");
-    printf("       --edit        Allow modifying the document besides annotations, form fields or chaning pages\n");
+    printf("       --edit        Allow modifying the document besides annotations, form fields or changing pages\n");
     printf("       --copy        Allow text and graphic extraction\n");
-    printf("       --editnotes   Add or modify text annoations or form fields (if ePdfPermissions_Edit is set also allow to create interactive form fields including signature)\n");
+    printf("       --editnotes   Add or modify text annoations or form fields (if ePdfPermissions_Edit is set also allow the creation interactive form fields including signature)\n");
     printf("       --fillandsign Fill in existing form or signature fields\n");
     printf("       --accessible  Extract text and graphics to support user with disabillities\n");
     printf("       --assemble    Assemble the document: insert, create, rotate delete pages or add bookmarks\n");
@@ -102,7 +106,7 @@ int main( int argc, char* argv[] )
 {
   const char*                      pszInput   = NULL;
   const char*                      pszOutput  = NULL;
-  PdfEncrypt::EPdfEncryptAlgorithm eAlgorithm = PdfEncrypt::ePdfEncryptAlgorithm_RC4V1;
+  PdfEncrypt::EPdfEncryptAlgorithm eAlgorithm = PdfEncrypt::ePdfEncryptAlgorithm_AESV2;
   int                              nPerm      = 0;
   std::string                      userPass;
   std::string                      ownerPass;
@@ -118,11 +122,14 @@ int main( int argc, char* argv[] )
   {
       if( argv[i][0] == '-' ) 
       {
+#ifndef PODOFO_HAVE_OPENSSL_NO_RC4
           if( strcmp( argv[i], "--rc4v1" ) == 0 ) 
               eAlgorithm = PdfEncrypt::ePdfEncryptAlgorithm_RC4V1;
           else if( strcmp( argv[i], "--rc4v2" ) == 0 ) 
               eAlgorithm = PdfEncrypt::ePdfEncryptAlgorithm_RC4V2;
-          else if( strcmp( argv[i], "--aesv2" ) == 0 ) 
+          else
+#endif // PODOFO_HAVE_OPENSSL_NO_RC4
+          if( strcmp( argv[i], "--aesv2" ) == 0 ) 
               eAlgorithm = PdfEncrypt::ePdfEncryptAlgorithm_AESV2;
 #ifdef PODOFO_HAVE_LIBIDN
           else if( strcmp( argv[i], "--aesv3" ) == 0 ) 
@@ -224,7 +231,7 @@ int main( int argc, char* argv[] )
   }
 
 
-  printf("%s was sucessfully encrypted to: %s\n", pszInput, pszOutput );
+  printf("%s was successfully encrypted to: %s\n", pszInput, pszOutput );
   
   return 0;
 }

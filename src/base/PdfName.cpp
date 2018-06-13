@@ -134,7 +134,7 @@ static std::string UnescapeName(T it, size_t length)
     unsigned int incount = 0, outcount = 0;
     while (incount++ < length)
     {
-        if (*it == '#')
+        if (*it == '#' && incount + 1 < length)
         {
             unsigned char hi = static_cast<unsigned char>(*(++it)); ++incount;
             unsigned char low = static_cast<unsigned char>(*(++it)); ++incount;
@@ -176,7 +176,10 @@ PdfName PdfName::FromEscaped( const std::string & sName )
 
 PdfName PdfName::FromEscaped( const char * pszName, pdf_long ilen )
 {
-    if( !ilen && pszName )
+    if( !pszName )
+        return PdfName();
+
+    if( !ilen )
         ilen = strlen( pszName );
 
     return PdfName(UnescapeName(pszName, ilen));

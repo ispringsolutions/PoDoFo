@@ -66,6 +66,7 @@ void EncryptTest::testDefault()
     delete pEncrypt;
 }
 
+#ifndef PODOFO_HAVE_OPENSSL_NO_RC4
 void EncryptTest::testRC4() 
 {
     PdfEncrypt* pEncrypt = PdfEncrypt::CreatePdfEncrypt( "user", "podofo", m_protection,
@@ -138,6 +139,7 @@ void EncryptTest::testRC4v2_128()
 
     delete pEncrypt;
 }
+#endif // PODOFO_HAVE_OPENSSL_NO_RC4
 
 void EncryptTest::testAESV2() 
 {
@@ -194,7 +196,7 @@ void EncryptTest::TestEncrypt( PdfEncrypt* pEncrypt )
 {
     pEncrypt->SetCurrentReference( PdfReference( 7, 0 ) );
     
-    int nOutputLen = pEncrypt->CalculateStreamLength(m_lLen);
+    pdf_long nOutputLen = pEncrypt->CalculateStreamLength(m_lLen);
 
     unsigned char *pEncryptedBuffer = new unsigned char[nOutputLen];
     unsigned char *pDecryptedBuffer = new unsigned char[m_lLen];
@@ -236,7 +238,7 @@ void EncryptTest::testLoadEncrypedFilePdfParser()
 
             // Must throw an exception
             CPPUNIT_FAIL("Encrypted file not recognized!");
-        } catch( const PdfError & e ) {
+        } catch( PdfError & e ) {
             if( e.GetError() != ePdfError_InvalidPassword ) 
             {
                 CPPUNIT_FAIL("Invalid encryption exception thrown!");
@@ -270,7 +272,7 @@ void EncryptTest::testLoadEncrypedFilePdfMemDocument()
 
             // Must throw an exception
             CPPUNIT_FAIL("Encrypted file not recognized!");
-        } catch( const PdfError & e ) {
+        } catch( PdfError & e ) {
             if( e.GetError() != ePdfError_InvalidPassword ) 
             {
                 CPPUNIT_FAIL("Invalid encryption exception thrown!");
@@ -321,14 +323,19 @@ void EncryptTest::testEnableAlgorithms()
     int nDefault = PdfEncrypt::GetEnabledEncryptionAlgorithms();
 
     // By default every algorithms should be enabled
+#ifndef PODOFO_HAVE_OPENSSL_NO_RC4
     CPPUNIT_ASSERT( PdfEncrypt::IsEncryptionEnabled( PdfEncrypt::ePdfEncryptAlgorithm_RC4V1 ) );
     CPPUNIT_ASSERT( PdfEncrypt::IsEncryptionEnabled( PdfEncrypt::ePdfEncryptAlgorithm_RC4V2 ) );
+#endif // PODOFO_HAVE_OPENSSL_NO_RC4
     CPPUNIT_ASSERT( PdfEncrypt::IsEncryptionEnabled( PdfEncrypt::ePdfEncryptAlgorithm_AESV2 ) );
 #ifdef PODOFO_HAVE_LIBIDN
     CPPUNIT_ASSERT( PdfEncrypt::IsEncryptionEnabled( PdfEncrypt::ePdfEncryptAlgorithm_AESV3 ) );
 #endif // PODOFO_HAVE_LIBIDN
-    CPPUNIT_ASSERT_EQUAL( PdfEncrypt::ePdfEncryptAlgorithm_RC4V1 |
+    CPPUNIT_ASSERT_EQUAL( 
+#ifndef PODOFO_HAVE_OPENSSL_NO_RC4
+                          PdfEncrypt::ePdfEncryptAlgorithm_RC4V1 |
                           PdfEncrypt::ePdfEncryptAlgorithm_RC4V2 |
+#endif // PODOFO_HAVE_OPENSSL_NO_RC4
                           PdfEncrypt::ePdfEncryptAlgorithm_AESV2
 #ifdef PODOFO_HAVE_LIBIDN
                           | PdfEncrypt::ePdfEncryptAlgorithm_AESV3
@@ -336,16 +343,20 @@ void EncryptTest::testEnableAlgorithms()
                                                                    ,
                           PdfEncrypt::GetEnabledEncryptionAlgorithms() );
     // Disable AES
+#ifndef PODOFO_HAVE_OPENSSL_NO_RC4
     PdfEncrypt::SetEnabledEncryptionAlgorithms( PdfEncrypt::ePdfEncryptAlgorithm_RC4V1 |
                                                 PdfEncrypt::ePdfEncryptAlgorithm_RC4V2 );
 
     CPPUNIT_ASSERT( PdfEncrypt::IsEncryptionEnabled( PdfEncrypt::ePdfEncryptAlgorithm_RC4V1 ) );
     CPPUNIT_ASSERT( PdfEncrypt::IsEncryptionEnabled( PdfEncrypt::ePdfEncryptAlgorithm_RC4V2 ) );
+#endif // PODOFO_HAVE_OPENSSL_NO_RC4
     CPPUNIT_ASSERT( !PdfEncrypt::IsEncryptionEnabled( PdfEncrypt::ePdfEncryptAlgorithm_AESV2 ) );
 
+#ifndef PODOFO_HAVE_OPENSSL_NO_RC4
     CPPUNIT_ASSERT_EQUAL( PdfEncrypt::ePdfEncryptAlgorithm_RC4V1 |
                           PdfEncrypt::ePdfEncryptAlgorithm_RC4V2,
                           PdfEncrypt::GetEnabledEncryptionAlgorithms() );
+#endif // PODOFO_HAVE_OPENSSL_NO_RC4
 
 
     PdfObject object;

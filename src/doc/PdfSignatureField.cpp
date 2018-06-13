@@ -49,46 +49,43 @@ PdfSignatureField::PdfSignatureField( PdfPage* pPage, const PdfRect & rRect, Pdf
     Init();
 }
 
-//begin L.K
-PdfSignatureField::PdfSignatureField( PdfAnnotation* pWidget, PdfAcroForm* pParent, PdfDocument* pDoc)
+PdfSignatureField::PdfSignatureField( PdfAnnotation* pWidget, PdfAcroForm* pParent, PdfDocument* pDoc, bool bInit )
 	:PdfField(PoDoFo::ePdfField_Signature, pWidget,  pParent, pDoc)
 {
     m_pSignatureObj = NULL;
-    Init();
+    if( bInit )
+        Init();
 }
 
-void PdfSignatureField::SetAppearanceStream( PdfXObject* pObject )
+PdfSignatureField::PdfSignatureField( PdfAnnotation* pWidget )
+	:PdfField( pWidget->GetObject(), pWidget )
+{
+    m_pSignatureObj = NULL;
+
+    // do not call Init() here
+    if( this->GetFieldObject()->GetDictionary().HasKey( "V" ) )
+    {
+        m_pSignatureObj = this->GetFieldObject()->GetOwner()->GetObject( this->GetFieldObject()->GetDictionary().GetKey( "V" )->GetReference() );
+    }
+}
+
+void PdfSignatureField::SetAppearanceStream( PdfXObject* pObject, EPdfAnnotationAppearance eAppearance, const PdfName & state )
 {
     if( !pObject )
     {
         PODOFO_RAISE_ERROR( ePdfError_InvalidHandle );
     }
 
-    if( !m_pObject->GetDictionary().HasKey( PdfName("AP") ) )
-        m_pObject->GetDictionary().AddKey( PdfName("AP"), PdfDictionary() );
-
-    if( m_pObject->GetDictionary().GetKey( PdfName("AP") )->GetDictionary().HasKey( PdfName("N") ) )
-       m_pObject->GetDictionary().GetKey( PdfName("AP") )->GetDictionary().RemoveKey(PdfName("N"));
+    SetAppearanceStreamForObject( m_pObject, pObject, eAppearance, state );
     
-    m_pObject->GetDictionary().GetKey( PdfName("AP") )->GetDictionary().AddKey( PdfName("N"), pObject->GetObject()->Reference() );
-    
-    this->GetAppearanceCharacteristics(true);
+    this->GetAppearanceCharacteristics( true );
 }
-//end L.K
 
 void PdfSignatureField::Init()
 {
-    m_pSignatureObj = this->GetFieldObject()->GetOwner()->CreateObject( "Sig" );
-    if( !m_pSignatureObj )
-    {
-        PODOFO_RAISE_ERROR( ePdfError_InvalidHandle );
-    }
-    GetFieldObject()->GetDictionary().AddKey("V", m_pSignatureObj->Reference());
+    m_pSignatureObj = NULL;
 
-    PdfDictionary &dict = m_pSignatureObj->GetDictionary();
-
-    dict.AddKey(PdfName::KeyFilter, PdfName("Adobe.PPKLite") );
-    dict.AddKey("SubFilter", PdfName("adbe.pkcs7.detached") );
+    EnsureSignatureObject ();
 }
 
 void PdfSignatureField::SetSignatureReason(const PdfString & rsText)
@@ -169,6 +166,37 @@ void PdfSignatureField::SetSignatureLocation( const PdfString & rsText )
     m_pSignatureObj->GetDictionary().AddKey(PdfName("Location"), rsText);
 }
 
+void PdfSignatureField::SetSignatureCreator( const PdfName & creator )
+{
+    if( !m_pSignatureObj )
+    {
+        PODOFO_RAISE_ERROR( ePdfError_InvalidHandle );
+    }
+
+    if( m_pSignatureObj->GetDictionary().HasKey( PdfName( "Prop_Build" ) ) )
+    {
+        PdfObject* propBuild = m_pSignatureObj->GetDictionary().GetKey( PdfName( "Prop_Build" ) );
+        if( propBuild->GetDictionary().HasKey( PdfName( "App" ) ) )
+        {
+            PdfObject* app = propBuild->GetDictionary().GetKey( PdfName( "App" ) );
+            if( app->GetDictionary().HasKey( PdfName( "Name" ) ) )
+            {
+                app->GetDictionary().RemoveKey( PdfName( "Name" ) );
+            }
+
+            propBuild->GetDictionary().RemoveKey( PdfName("App") );
+        }
+
+        m_pSignatureObj->GetDictionary().RemoveKey(PdfName("Prop_Build"));
+    }
+
+    m_pSignatureObj->GetDictionary().AddKey( PdfName( "Prop_Build" ), PdfDictionary() );
+    PdfObject* propBuild = m_pSignatureObj->GetDictionary().GetKey( PdfName( "Prop_Build" ) );
+    propBuild->GetDictionary().AddKey( PdfName( "App" ), PdfDictionary() );
+    PdfObject* app = propBuild->GetDictionary().GetKey( PdfName( "App" ) );
+    app->GetDictionary().AddKey( PdfName( "Name" ), creator );
+}
+
 void PdfSignatureField::AddCertificationReference( PdfObject* pDocumentCatalog, EPdfCertPermission perm )
 {
     if( !m_pSignatureObj )
@@ -208,5 +236,27 @@ void PdfSignatureField::AddCertificationReference( PdfObject* pDocumentCatalog, 
     m_pSignatureObj->GetDictionary().AddKey(PdfName("Reference"), PdfVariant(refers));
 }
 
+PdfObject* PdfSignatureField::GetSignatureObject( void ) const
+{
+    return m_pSignatureObj;
+}
+
+void PdfSignatureField::EnsureSignatureObject( void )
+{
+    if( m_pSignatureObj )
+        return;
+
+    m_pSignatureObj = this->GetFieldObject()->GetOwner()->CreateObject( "Sig" );
+    if( !m_pSignatureObj )
+    {
+        PODOFO_RAISE_ERROR( ePdfError_InvalidHandle );
+    }
+    GetFieldObject()->GetDictionary().AddKey( "V" , m_pSignatureObj->Reference() );
+
+    PdfDictionary &dict = m_pSignatureObj->GetDictionary();
+
+    dict.AddKey( PdfName::KeyFilter, PdfName( "Adobe.PPKLite" ) );
+    dict.AddKey( "SubFilter", PdfName( "adbe.pkcs7.detached" ) );
+}
 
 }

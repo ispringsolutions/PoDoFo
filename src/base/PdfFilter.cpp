@@ -188,7 +188,7 @@ class PdfFilteredDecodeStream : public PdfOutputStream {
         try {
             m_filter->DecodeBlock( pBuffer, lLen );
         }
-        catch( const PdfError & e ) 
+        catch( PdfError & e ) 
         {
             m_bFilterFailed = true;
             throw e;
@@ -270,6 +270,9 @@ std::auto_ptr<PdfFilter> PdfFilterFactory::Create( const EPdfFilter eFilter )
     PdfFilter* pFilter = NULL;
     switch( eFilter )
     {
+        case ePdfFilter_None:
+            break;
+
         case ePdfFilter_ASCIIHexDecode:
             pFilter = new PdfHexFilter();
             break;
